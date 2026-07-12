@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sheetnest"
+version = "0.1.0"
+description = "A general-purpose 2D irregular-polygon nesting (bin-packing) tool: arranges a set of 2D shapes onto rectangular sheet stock with minimal waste, via a no-fit-polygon bottom-left-fill heuristic."
+readme = "README.md"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+  { name = "Emily Williams" },
+]
+requires-python = ">=3.9"
+dependencies = [
+  "shapely",
+  "pyclipper",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+sheetnest = "sheetnest.cli:main"
+
+[tool.setuptools]
+packages = ["sheetnest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

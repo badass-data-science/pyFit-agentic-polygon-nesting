@@ -1,0 +1,162 @@
+#    Sheet-Nesting:  A general-purpose 2D nesting (bin-packing) tool
+#    Copyright (C) 2026  Emily Williams
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from itertools import combinations
+from typing import List, Tuple
+
+from shapely.geometry import Polygon as ShapelyPolygon, LinearRing, box
+
+from .geometry import NestResult, Part, Placement, Sheet, polygon_area, transform_polygon
+from .nfp import no_fit_polygon
+from .sheet import inner_fit_bounds, sheet_utilization
+
+OVERLAP_AREA_TOLERANCE = 1e-9
+BOUNDS_TOLERANCE = 1e-9
+
+
+def _extract_points(geom) -> List[Tuple[float, float]]:
+  # Flattens any shapely intersection result (Point, MultiPoint,
+  # LineString -- from collinear/overlapping edges, MultiLineString, or a
+  # GeometryCollection mixing those) down to a flat list of coordinate
+  # points.
+  if geom.is_empty:
+    return []
+  if geom.geom_type == "Point":
+    return [(geom.x, geom.y)]
+  if geom.geom_type == "LineString":
+    return list(geom.coords)
+  if geom.geom_type in ("MultiPoint", "MultiLineString", "GeometryCollection"):
+    points = []
+    for sub_geom in geom.geoms:
+      points.extend(_extract_points(sub_geom))
+    return points
+  return []
+
+
+def _candidate_orientations(part: Part, rotation_step_degrees: float):
+  angle = 0.0
+  while angle < 360.0:
+    yield angle, False
+    if part.allow_mirror:
+      yield angle, True
+    angle += rotation_step_degrees
+
+
+def _overlaps_any(polygon: List, placed_polygons: List[List]) -> bool:
+  shp = ShapelyPolygon(polygon)
+  for placed in placed_polygons:
+    if shp.intersection(ShapelyPolygon(placed)).area > OVERLAP_AREA_TOLERANCE:
+      return True
+  return False
+
+
+def _valid_candidate_points(bounds: Tuple[float, float, float, float], oriented_polygon: List,
+                             placed_polygons: List[List]) -> List[Tuple[float, float]]:
+  # Bottom-left-fill candidate positions: the sheet's own 4 corners, every
+  # vertex of the NFP of oriented_polygon against each already-placed
+  # part, every point where an NFP boundary crosses the sheet's own
+  # boundary, and every point where two different placed parts' NFP
+  # boundaries cross each other. The last of these matters more than it
+  # might look: e.g. packing plain unit squares in a grid, the position
+  # that lets a 3rd square slot in between two already-placed squares is
+  # exactly such an NFP-NFP crossing, not a vertex of either NFP alone --
+  # without it, this heuristic silently starts unnecessary extra sheets
+  # even for a trivially-tileable case (verified: a 3x2 sheet with six
+  # unit squares needed this to actually fit all six on one sheet instead
+  # of two). This still isn't full NFP-boundary tracing (the true valid
+  # region's boundary can in principle need higher-order crossing points
+  # too), but every candidate here is explicitly re-validated below, so
+  # it can only produce a non-optimal placement, never an invalid one.
+  dx_lo, dy_lo, dx_hi, dy_hi = bounds
+  candidates = [(dx_lo, dy_lo), (dx_hi, dy_lo), (dx_lo, dy_hi), (dx_hi, dy_hi)]
+  sheet_ring = box(dx_lo, dy_lo, dx_hi, dy_hi).exterior
+
+  nfp_rings = []
+  for placed in placed_polygons:
+    for nfp_polygon in no_fit_polygon(placed, oriented_polygon):
+      candidates.extend(nfp_polygon)
+      ring = LinearRing(nfp_polygon)
+      candidates.extend(_extract_points(ring.intersection(sheet_ring)))
+      nfp_rings.append(ring)
+
+  for ring_a, ring_b in combinations(nfp_rings, 2):
+    candidates.extend(_extract_points(ring_a.intersection(ring_b)))
+
+  valid = []
+  for dx, dy in candidates:
+    if not (dx_lo - BOUNDS_TOLERANCE <= dx <= dx_hi + BOUNDS_TOLERANCE
+            and dy_lo - BOUNDS_TOLERANCE <= dy <= dy_hi + BOUNDS_TOLERANCE):
+      continue
+    translated = [(x + dx, y + dy) for x, y in oriented_polygon]
+    if _overlaps_any(translated, placed_polygons):
+      continue
+    valid.append((dx, dy))
+  return valid
+
+
+def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -> NestResult:
+  # Bottom-left-fill with NFP-based collision avoidance: a heuristic, not
+  # a globally optimal solver (irregular 2D bin-packing is NP-hard) --
+  # see nfp.py and this package's README for the algorithm and its known
+  # limitations.
+  instances: List[Part] = []
+  for part in parts:
+    instances.extend([part] * part.quantity)
+  instances.sort(key=lambda p: polygon_area(p.polygon), reverse=True)
+
+  placements: List[Placement] = []
+  sheets_polygons: List[List[List]] = [[]]
+
+  for part in instances:
+    placed_this_part = False
+
+    while not placed_this_part:
+      sheet_index = len(sheets_polygons) - 1
+      best = None  # (dx, dy, rotation, mirrored, oriented_polygon)
+
+      for rotation, mirrored in _candidate_orientations(part, rotation_step_degrees):
+        oriented = transform_polygon(part.polygon, rotation, mirrored, 0.0, 0.0)
+        bounds = inner_fit_bounds(sheet, oriented)
+        if bounds is None:
+          continue
+        for dx, dy in _valid_candidate_points(bounds, oriented, sheets_polygons[sheet_index]):
+          if best is None or (dx, dy) < (best[0], best[1]):
+            best = (dx, dy, rotation, mirrored, oriented)
+
+      if best is not None:
+        dx, dy, rotation, mirrored, oriented = best
+        final_polygon = [(x + dx, y + dy) for x, y in oriented]
+        placements.append(Placement(
+          part_name=part.name, sheet_index=sheet_index, position=(dx, dy),
+          rotation_degrees=rotation, mirrored=mirrored, polygon=final_polygon,
+        ))
+        sheets_polygons[sheet_index].append(final_polygon)
+        placed_this_part = True
+      elif len(sheets_polygons[sheet_index]) == 0:
+        raise ValueError(
+          "Part %r does not fit on an empty %sx%s sheet in any orientation."
+          % (part.name, sheet.width, sheet.height)
+        )
+      else:
+        sheets_polygons.append([])
+
+  utilization = [
+    sheet_utilization(sheet, [p for p in placements if p.sheet_index == i])
+    for i in range(len(sheets_polygons))
+  ]
+
+  return NestResult(sheets_used=len(sheets_polygons), placements=placements,
+                     utilization_by_sheet=utilization)

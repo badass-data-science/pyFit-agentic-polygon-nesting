@@ -1,0 +1,88 @@
+#    Sheet-Nesting:  A general-purpose 2D nesting (bin-packing) tool
+#    Copyright (C) 2026  Emily Williams
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from typing import List
+
+import pyclipper
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
+
+from .geometry import Point, orient_ccw
+
+# pyclipper works in scaled 64-bit integer coordinates, not floats; this
+# scale factor was chosen to give ~6 decimal digits of sub-unit precision
+# without risking integer overflow for sheets/parts sized in the tens of
+# thousands of units (pyclipper's internal range comfortably covers
+# coordinates up to roughly +-4.6e18 at this scale).
+SCALE = 10 ** 6
+
+
+def _to_int(polygon: List[Point]):
+  return [(int(round(x * SCALE)), int(round(y * SCALE))) for x, y in polygon]
+
+
+def _from_int(polygon) -> List[Point]:
+  return [(x / SCALE, y / SCALE) for x, y in polygon]
+
+
+def no_fit_polygon(stationary: List[Point], moving: List[Point]) -> List[List[Point]]:
+  # The outer NFP of `moving` around a fixed `stationary`: the set of
+  # reference-point positions where `moving` (translated so its local
+  # origin lands on that position, with no rotation/mirroring applied --
+  # callers are responsible for rotating/mirroring `moving` themselves
+  # before calling this) touches or overlaps `stationary`. Computed as
+  # the Minkowski sum of `stationary` and the point-reflection of
+  # `moving` through its own local origin (NFP(A, B) = A (+) (-B)), the
+  # standard technique -- verified against the hand-computable case of
+  # two unit squares (reference corner at origin), which must give the
+  # exact 2x2 square from (-1,-1) to (1,1): a moving-part reference point
+  # strictly inside the returned polygon overlaps the stationary shape;
+  # on the boundary, the two touch; outside, they don't overlap at all.
+  #
+  # Usually a single polygon for the convex shapes this package is built
+  # around, but the return type is always a list since a genuinely
+  # non-convex NFP could in principle be disjoint.
+  #
+  # pyclipper's MinkowskiSum(pattern, path, True) sweeps `pattern` along
+  # each edge of the closed `path` and returns the *raw* swept contours
+  # rather than a single resolved polygon -- for a pattern that's small
+  # relative to the path, this includes an inner contour with opposite
+  # winding that looks like it's marking a hole, but isn't one: the true
+  # Minkowski sum of two convex filled shapes is always itself convex
+  # (hence simply connected, no holes possible -- verified against an
+  # independent ground truth, the convex hull of all pairwise
+  # vertex-sums, on a small-pattern/large-path case where the raw
+  # Clipper output was misleading). The fix is to treat every returned
+  # contour as an independent *solid* region and take their union (via
+  # shapely, ignoring winding direction) rather than trusting Clipper's
+  # winding-implied fill rule -- confirmed to recover the correct
+  # hole-free result on that same case.
+  #
+  # This union-of-solids treatment assumes the true result has no
+  # legitimate holes, which holds for the convex shapes this package
+  # targets (pyDome's triangular panels, and irregular-but-simple shapes
+  # generally) but would be wrong for a genuinely non-convex NFP with a
+  # real unreachable pocket -- out of scope for this package.
+  reflected_moving = [(-x, -y) for x, y in moving]
+  stationary_int = _to_int(orient_ccw(stationary))
+  reflected_int = _to_int(orient_ccw(reflected_moving))
+
+  raw_contours = pyclipper.MinkowskiSum(reflected_int, stationary_int, True)
+  solids = [Polygon(_from_int(poly)) for poly in raw_contours]
+  resolved = unary_union(solids)
+
+  polygons = resolved.geoms if resolved.geom_type == "MultiPolygon" else [resolved]
+  return [orient_ccw(list(poly.exterior.coords)[:-1]) for poly in polygons]
