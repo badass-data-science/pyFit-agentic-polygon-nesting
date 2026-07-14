@@ -119,22 +119,38 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -
 
   placements: List[Placement] = []
   sheets_polygons: List[List[List]] = [[]]
+  sheet_area = sheet.width * sheet.height
+  # running (area already placed) per sheet, checked before doing any
+  # NFP work -- reusing scrap means every part instance can end up
+  # trying many already-full sheets before reaching one with room, and
+  # the full candidate-point search (NFP against every placed part) is
+  # the expensive part of this algorithm. A part can never fit where
+  # its own area doesn't, so this is a cheap, exact (never wrongly
+  # skips a sheet that could actually fit) filter that turns an
+  # already-full sheet into an O(1) skip instead of a full NFP sweep.
+  sheets_placed_area: List[float] = [0.0]
 
   for part in instances:
     placed_this_part = False
+    sheet_index = 0
+    part_area = polygon_area(part.polygon)
 
     while not placed_this_part:
-      sheet_index = len(sheets_polygons) - 1
+      if sheet_index >= len(sheets_polygons):
+        sheets_polygons.append([])
+        sheets_placed_area.append(0.0)
+
       best = None  # (dx, dy, rotation, mirrored, oriented_polygon)
 
-      for rotation, mirrored in _candidate_orientations(part, rotation_step_degrees):
-        oriented = transform_polygon(part.polygon, rotation, mirrored, 0.0, 0.0)
-        bounds = inner_fit_bounds(sheet, oriented)
-        if bounds is None:
-          continue
-        for dx, dy in _valid_candidate_points(bounds, oriented, sheets_polygons[sheet_index]):
-          if best is None or (dx, dy) < (best[0], best[1]):
-            best = (dx, dy, rotation, mirrored, oriented)
+      if part_area <= sheet_area - sheets_placed_area[sheet_index] + OVERLAP_AREA_TOLERANCE:
+        for rotation, mirrored in _candidate_orientations(part, rotation_step_degrees):
+          oriented = transform_polygon(part.polygon, rotation, mirrored, 0.0, 0.0)
+          bounds = inner_fit_bounds(sheet, oriented)
+          if bounds is None:
+            continue
+          for dx, dy in _valid_candidate_points(bounds, oriented, sheets_polygons[sheet_index]):
+            if best is None or (dx, dy) < (best[0], best[1]):
+              best = (dx, dy, rotation, mirrored, oriented)
 
       if best is not None:
         dx, dy, rotation, mirrored, oriented = best
@@ -144,6 +160,7 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -
           rotation_degrees=rotation, mirrored=mirrored, polygon=final_polygon,
         ))
         sheets_polygons[sheet_index].append(final_polygon)
+        sheets_placed_area[sheet_index] += part_area
         placed_this_part = True
       elif len(sheets_polygons[sheet_index]) == 0:
         raise ValueError(
@@ -151,7 +168,12 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -
           % (part.name, sheet.width, sheet.height)
         )
       else:
-        sheets_polygons.append([])
+        # this sheet is full for this part, but earlier/later sheets may
+        # still have room -- try the next one (opened fresh above if it
+        # doesn't exist yet) before giving up, so leftover scrap on an
+        # earlier sheet gets reused instead of every miss opening a new
+        # sheet
+        sheet_index += 1
 
   utilization = [
     sheet_utilization(sheet, [p for p in placements if p.sheet_index == i])
