@@ -21,6 +21,7 @@ import sys
 from .geometry import Part, Sheet
 from .io_dxf import import_polygons_from_dxf, write_sheet_dxf
 from .packer import pack
+from .preview import save_sheet_preview
 
 
 def display_help():
@@ -50,6 +51,10 @@ Options:
 \t-R, --rotation-step\tDegrees between candidate rotation angles tried during placement search. A smaller
 \t\tstep considers more orientations (denser search, better packing, slower); a larger step is faster
 \t\tbut coarser. Must be a positive floating point number less than 360. Default 15.
+
+\t-P, --preview\tAlso save a quick 2D preview image ("<output>_sheet1.png", "<output>_sheet2.png", ...)
+\t\tof each sheet's layout -- the sheet boundary plus every placed part's outline -- so a result can
+\t\tbe sanity-checked without opening a DXF viewer.
 
 \t-h, --help\tShow usage and exit.
 """
@@ -82,14 +87,15 @@ def main():
   job_path = None
   output_path = None
   rotation_step_degrees = 15.0
+  preview_output = False
 
   if len(sys.argv[1:]) == 0:
     display_help()
     sys.exit(-1)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:h',
-                                ['job=', 'output=', 'rotation-step=', 'help'])
+    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Ph',
+                                ['job=', 'output=', 'rotation-step=', 'preview', 'help'])
   except getopt.error as msg:
     print(str(msg) + ' (for help use --help)')
     sys.exit(-1)
@@ -102,6 +108,8 @@ def main():
       job_path = a
     if o in ('-o', '--output'):
       output_path = a
+    if o in ('-P', '--preview'):
+      preview_output = True
     if o in ('-R', '--rotation-step'):
       try:
         rotation_step_degrees = float(a)
@@ -137,6 +145,13 @@ def main():
     sheet_path = '%s_sheet%d.dxf' % (output_path, sheet_index + 1)
     write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
     files_written.append(sheet_path)
+
+    if preview_output:
+      preview_path = '%s_sheet%d.png' % (output_path, sheet_index + 1)
+      save_sheet_preview(sheet, placements_on_sheet, preview_path,
+                          sheet_number=sheet_index + 1,
+                          utilization=result.utilization_by_sheet[sheet_index])
+      files_written.append(preview_path)
 
   report = {
     'sheets_used': result.sheets_used,

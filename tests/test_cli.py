@@ -95,6 +95,51 @@ def test_dxf_sourced_job_nests_successfully(tmp_path):
     assert len(report["placements"]) == 4
 
 
+def test_preview_flag_writes_one_png_per_sheet(tmp_path):
+    job_path = tmp_path / "job.json"
+    job_path.write_text(json.dumps({
+        "sheet": {"width": 2, "height": 2},
+        "parts": [{
+            "name": "sq",
+            "polygon": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "quantity": 5,  # 4 fit per sheet -> forces a 2nd sheet
+            "allow_mirror": False,
+        }],
+    }))
+    out = tmp_path / "nest"
+
+    result = run_cli(["-j", str(job_path), "-o", str(out), "-R", "90", "-P"])
+
+    assert result.returncode == 0
+    report = json.loads(result.stdout)
+    assert report["sheets_used"] == 2
+
+    for n in (1, 2):
+        png_file = out.parent / ("nest_sheet%d.png" % n)
+        assert png_file.exists()
+        assert png_file.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+        assert str(png_file) in report["files_written"]
+
+
+def test_no_preview_flag_means_no_png_files(tmp_path):
+    job_path = tmp_path / "job.json"
+    job_path.write_text(json.dumps({
+        "sheet": {"width": 3, "height": 2},
+        "parts": [{
+            "name": "sq",
+            "polygon": [[0, 0], [1, 0], [1, 1], [0, 1]],
+            "quantity": 6,
+            "allow_mirror": False,
+        }],
+    }))
+    out = tmp_path / "nest"
+
+    result = run_cli(["-j", str(job_path), "-o", str(out), "-R", "90"])
+
+    assert result.returncode == 0
+    assert not (out.parent / "nest_sheet1.png").exists()
+
+
 def test_nonpositive_rotation_step_reports_a_clear_error(tmp_path):
     job = tmp_path / "job.json"
     job.write_text(json.dumps({

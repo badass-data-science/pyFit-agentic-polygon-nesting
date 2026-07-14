@@ -101,3 +101,31 @@ def test_part_too_large_for_an_empty_sheet_raises_a_clear_error():
 
     with pytest.raises(ValueError, match="does not fit"):
         pack(parts, sheet, rotation_step_degrees=90)
+
+
+def test_scrap_on_an_earlier_sheet_is_reused_instead_of_opening_a_new_one():
+    # constructed (and confirmed against a from-scratch "try only the
+    # last sheet" variant) so the two algorithms genuinely disagree:
+    # "big" leaves a 1-wide strip on sheet 0 -- plenty of room for
+    # "small" -- while "med" (processed next, since its area is smaller
+    # than "big"'s but doesn't fit in that 1-wide strip) fills sheet 1
+    # so tightly that "small" doesn't fit there. A packer that only ever
+    # tries the most-recently-opened sheet is forced to open a 3rd sheet
+    # for "small"; one that reuses earlier scrap fits everything on 2.
+    sheet = Sheet(width=3, height=2)
+    big = [(0, 0), (2, 0), (2, 2), (0, 2)]
+    med = [(0, 0), (2.5, 0), (2.5, 1.5), (0, 1.5)]
+    small = [(0, 0), (0.6, 0), (0.6, 0.6), (0, 0.6)]
+    parts = [
+        Part(name="big", polygon=big, quantity=1, allow_mirror=False),
+        Part(name="med", polygon=med, quantity=1, allow_mirror=False),
+        Part(name="small", polygon=small, quantity=1, allow_mirror=False),
+    ]
+
+    result = pack(parts, sheet, rotation_step_degrees=90)
+
+    assert result.sheets_used == 2
+    small_placement = next(p for p in result.placements if p.part_name == "small")
+    assert small_placement.sheet_index == 0
+    _assert_no_overlaps_per_sheet(result)
+    _assert_within_sheet_bounds(result, sheet)
