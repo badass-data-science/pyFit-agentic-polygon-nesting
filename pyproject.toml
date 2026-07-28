@@ -20,9 +20,11 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest"]
+mcp = ["mcp<2.0"]
 
 [project.scripts]
 sheetnest = "sheetnest.cli:main"
+sheetnest-mcp = "sheetnest.mcp_server:main"
 
 [tool.setuptools]
 packages = ["sheetnest"]

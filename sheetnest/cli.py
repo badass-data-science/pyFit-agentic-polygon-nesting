@@ -18,10 +18,7 @@ import getopt
 import json
 import sys
 
-from .geometry import Part, Sheet
-from .io_dxf import import_polygons_from_dxf, write_sheet_dxf
-from .packer import pack
-from .preview import save_sheet_preview
+from .api import run_nest, nest_result_report, write_nest_files
 
 
 def display_help():
@@ -61,28 +58,6 @@ Options:
   print(help_text)
 
 
-def _load_part(spec: dict) -> Part:
-  if "dxf" in spec:
-    loops = import_polygons_from_dxf(spec["dxf"])
-    if len(loops) != 1:
-      print('Part %r: DXF file %r must contain exactly one closed loop, found %d. Exiting.'
-            % (spec.get("name", "?"), spec["dxf"], len(loops)))
-      sys.exit(-1)
-    polygon = loops[0]
-  elif "polygon" in spec:
-    polygon = [(float(x), float(y)) for x, y in spec["polygon"]]
-  else:
-    print('Part %r must specify either "dxf" or "polygon". Exiting.' % spec.get("name", "?"))
-    sys.exit(-1)
-
-  return Part(
-    name=spec["name"],
-    polygon=polygon,
-    quantity=int(spec["quantity"]),
-    allow_mirror=bool(spec.get("allow_mirror", True)),
-  )
-
-
 def main():
   job_path = None
   output_path = None
@@ -116,9 +91,6 @@ def main():
       except ValueError:
         print('-R or --rotation-step argument must be a floating point number. Exiting.')
         sys.exit(-1)
-      if not (0 < rotation_step_degrees < 360):
-        print('-R or --rotation-step argument must be greater than zero and less than 360. Exiting.')
-        sys.exit(-1)
 
   if job_path is None:
     print('A job spec path is required. Use the -j argument. Exiting.')
@@ -130,44 +102,16 @@ def main():
   with open(job_path) as f:
     job = json.load(f)
 
-  sheet = Sheet(width=float(job["sheet"]["width"]), height=float(job["sheet"]["height"]))
-  parts = [_load_part(spec) for spec in job["parts"]]
-
   try:
-    result = pack(parts, sheet, rotation_step_degrees=rotation_step_degrees)
+    sheet, result = run_nest(job, rotation_step_degrees=rotation_step_degrees)
   except ValueError as e:
     print(str(e))
     sys.exit(-1)
 
-  files_written = []
-  for sheet_index in range(result.sheets_used):
-    placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
-    sheet_path = '%s_sheet%d.dxf' % (output_path, sheet_index + 1)
-    write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
-    files_written.append(sheet_path)
+  files_written = write_nest_files(sheet, result, output_path, preview=preview_output)
 
-    if preview_output:
-      preview_path = '%s_sheet%d.png' % (output_path, sheet_index + 1)
-      save_sheet_preview(sheet, placements_on_sheet, preview_path,
-                          sheet_number=sheet_index + 1,
-                          utilization=result.utilization_by_sheet[sheet_index])
-      files_written.append(preview_path)
-
-  report = {
-    'sheets_used': result.sheets_used,
-    'utilization_by_sheet': result.utilization_by_sheet,
-    'files_written': files_written,
-    'placements': [
-      {
-        'part_name': p.part_name,
-        'sheet_index': p.sheet_index,
-        'position': list(p.position),
-        'rotation_degrees': p.rotation_degrees,
-        'mirrored': p.mirrored,
-      }
-      for p in result.placements
-    ],
-  }
+  report = nest_result_report(result)
+  report['files_written'] = files_written
   report_path = '%s_report.json' % output_path
   with open(report_path, 'w') as f:
     json.dump(report, f, indent=2)

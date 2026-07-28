@@ -24,6 +24,11 @@ this project is standalone.
 pip install -e ".[test]"
 ```
 
+Optional extra: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, since
+`mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `sheetnest/mcp_server.py`'s
+`FastMCP`/`Image` imports and `tests/test_mcp_server.py` both 404 on 2.0.0's new
+module layout).
+
 ## Test
 
 ```
@@ -31,7 +36,10 @@ pytest
 ```
 
 - One test module per `sheetnest/*.py` source module, plus `tests/test_cli.py`
-  (subprocess-level CLI integration tests).
+  (subprocess-level CLI integration tests) and `tests/test_mcp_server.py`
+  (direct calls into the `@mcp.tool()`-decorated functions, auto-skipped via
+  `pytest.importorskip("mcp")` unless the `mcp` extra is installed — same
+  pattern as pyLair's own MCP test).
 - No golden-value/oracle test harness exists yet (unlike pyLair's
   `test_geometry_oracle.py`) — if you touch NFP or placement logic, verify
   correctness against an independent method (e.g. convex hull of pairwise vertex
@@ -51,7 +59,9 @@ you're editing.
 | `sheetnest/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact bounding-box math, no NFP needed) and utilization reporting. |
 | `sheetnest/io_dxf.py` | A minimal hand-written raw DXF reader/writer, no DXF library dependency. |
 | `sheetnest/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout. |
-| `sheetnest/cli.py` | `getopt`-based command-line entry point. |
+| `sheetnest/api.py` | Shared entry point for the CLI and MCP server: `load_part`/`run_nest` (job-spec parsing + packing, `ValueError` on bad input) and `nest_result_report`/`write_nest_files` (structured report / file output). |
+| `sheetnest/mcp_server.py` | MCP server (`sheetnest-mcp`, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest`, all built on `api.py`. |
+| `sheetnest/cli.py` | `getopt`-based command-line entry point, built on `api.py`. |
 
 ## A real gotcha worth knowing about (`sheetnest/nfp.py`)
 

@@ -22,6 +22,12 @@ by date instead.
 
 - `AGENTS.md`: agent-facing guide to setup, testing, module layout, and the
   Minkowski-sum NFP gotcha.
+- MCP interface (`sheetnest-mcp`, optional `mcp` extra): a `FastMCP` server
+  exposing `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools,
+  mirroring pyLair's own MCP server pattern. `sheetnest/api.py` factors the
+  job-spec parsing and packing logic (previously private to `cli.py`) into a
+  shared entry point (`load_part`, `run_nest`, `nest_result_report`,
+  `write_nest_files`) used by both the CLI and the MCP server.
 
 ## 2026-07-14
 
