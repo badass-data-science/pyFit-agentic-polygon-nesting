@@ -129,8 +129,11 @@ should become `pyfit`, not a second naming scheme to preserve.
 
 ## Docs stay in sync
 
-`README.md` and `blog-posts/introducing-sheet-nesting.md` (filename kept as a
-historical artifact) both describe this project. The blog post also references
+`README.md` and `blog-posts/introducing-pyfit.md` (renamed from
+`introducing-sheet-nesting.md` on 2026-07-28, alongside the project's own rename
+to pyFit — its narrative content was updated to match at the same time, unlike
+the two earlier project renames, where the post's prose was deliberately left
+as historical flavor) both describe this project. The blog post also references
 pyLair by name and links to its repo — if pyLair moves again or this project's
 directory/repo location changes again, that post's links will go stale and need
 another pass.
