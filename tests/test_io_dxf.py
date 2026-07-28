@@ -26,11 +26,11 @@ def test_import_recovers_a_hand_written_triangle(tmp_path):
     assert sorted(loops[0]) == sorted([(0.0, 0.0), (3.0, 0.0), (0.0, 4.0)])
 
 
-def test_import_from_pydome_face_template_matches_reported_edge_lengths(tmp_path):
-    pydome_output = pytest.importorskip("pydome.output")
+def test_import_from_pylair_face_template_matches_reported_edge_lengths(tmp_path):
+    pylair_output = pytest.importorskip("pylair.output")
     edge_lengths = (3.0, 4.0, 5.0)
     path = tmp_path / "facetype1.dxf"
-    pydome_output.OutputFaceTemplateDXF(edge_lengths, str(path))
+    pylair_output.OutputFaceTemplateDXF(edge_lengths, str(path))
 
     loops = import_polygons_from_dxf(str(path))
 
