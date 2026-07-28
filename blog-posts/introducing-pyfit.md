@@ -29,6 +29,12 @@ The catch: this isn't a simple problem. Deciding how to optimally pack arbitrary
 # How It Connects to pyLair
 
 The connection is deliberately shallow: a file, not an import statement. `pylair ... -T` writes one DXF cutting template per unique panel shape and reports exactly how many of each are needed; point a pyFit job spec's `"dxf"` field at those files and `"quantity"` at those counts, and pyFit will figure out how to actually lay them out on real stock. Neither project imports the other, and pyFit's DXF importer has no idea (and no need to know) that a shape it's reading came from a geodesic dome rather than, say, a birdhouse or a cosplay prop. pyLair tells you what to cut; pyFit tells you where to cut it from.
+
+Here's that connection in practice — real triangular panel templates straight out of a `pylair -T` run, packed by pyFit onto a sheet of stock:
+
+![One sheet of pyFit's output: real pyLair dome-panel triangles packed onto a sheet, 60.9% utilized](images/nest_sheet1_pylair_triangles.png)
+
+Worth being honest about what this picture shows: 60.9% utilized, not a tight tiling. Real pyLair triangles don't pack as densely as, say, plain squares under pyFit's bottom-left-fill heuristic — a finer rotation step only nudges that number a little (see "Known limitations" in the README), which is a genuine limitation of the algorithm, not a rendering artifact or a bad test case. It's still a real, verified result: this exact job was independently re-checked (outside pyFit's own reporting) for zero overlaps and full containment within the sheet boundary.
 # An Agentic Interface, Not Just a Command Line
 
 pyFit now speaks [MCP](https://modelcontextprotocol.io) (the Model Context Protocol), the same way pyLair does. Install the optional `mcp` extra and `pyfit-mcp` starts a small server exposing four tools an LLM assistant can call directly: `design_nest` (pack and return a utilization summary, no files), `preview_nest` (pack and return each sheet's layout as an inline image), `get_nest_report` (pack and return the full structured placement data), and `export_nest` (pack and actually write the DXF/PNG files, the same output the CLI produces). All four share one `pyfit/api.py` core with the `pyfit` CLI itself, so there's exactly one place job-spec parsing and packing logic lives, not two copies quietly drifting apart.
