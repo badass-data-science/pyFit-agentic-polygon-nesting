@@ -1,4 +1,4 @@
-#    Sheet-Nesting:  A general-purpose 2D nesting (bin-packing) tool
+#    agentic-irregular-polygon-nesting:  A general-purpose 2D nesting (bin-packing) tool
 #    Copyright (C) 2026  Emily Williams
 #
 #    This program is free software: you can redistribute it and/or modify

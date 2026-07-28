@@ -1,4 +1,4 @@
-# Sheet-Nesting
+# agentic-irregular-polygon-nesting
 
 A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D shapes and how many of each you need, arranges them onto rectangular sheet stock (plywood, acrylic, sheet metal, ...) with minimal wasted material.
 
@@ -76,4 +76,4 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 
 ## License
 
-GPL-3.0-or-later.
+MIT.
