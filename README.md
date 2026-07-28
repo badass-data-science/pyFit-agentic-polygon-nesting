@@ -2,7 +2,7 @@
 
 A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D shapes and how many of each you need, arranges them onto rectangular sheet stock (plywood, acrylic, sheet metal, ...) with minimal wasted material.
 
-This started as a follow-on to [pyDome](../Geodesic-Dome-Design/pyDome) — pyDome's Bill of Materials tells you exactly which triangular panel shapes a geodesic dome needs and how many of each, but has nothing to say about how to lay them out on actual material. `pyfit` is deliberately **not** a pyDome module, though — it's a standalone tool that happens to read the DXF files pyDome (or any other CAD tool) can produce, so it's equally usable for unrelated 2D cutting/fabrication problems.
+This started as a follow-on to [pyLair](https://github.com/badass-data-science/pyLair-agentic-geodesics) — pyLair's Bill of Materials tells you exactly which triangular panel shapes a geodesic dome needs and how many of each, but has nothing to say about how to lay them out on actual material. `pyfit` is deliberately **not** a pyLair module, though — it's a standalone tool that happens to read the DXF files pyLair (or any other CAD tool) can produce, so it's equally usable for unrelated 2D cutting/fabrication problems.
 
 ## Installation
 
@@ -41,9 +41,9 @@ A job spec is JSON describing the sheet size and the parts to nest:
 
 Each part gives its outline either as `"dxf"` (a path to a DXF file containing exactly one closed loop) or `"polygon"` (an inline list of `[x, y]` points), a `"quantity"`, and optionally `"allow_mirror"` (default `true`; set `false` for chirality-sensitive material, where flipping a shape over isn't the same as another copy of it — e.g. wood grain, a printed pattern, or a one-sided finish).
 
-### Using pyDome's panel templates as input
+### Using pyLair's panel templates as input
 
-pyDome's `-T/--face-templates` flag writes one DXF cutting template per unique panel shape (`<output>_facetype1.dxf`, ...) and reports a `panel_count` for each in its Bill of Materials. Point a `pyfit` job spec's `"dxf"` fields at those files and their `"quantity"` at the reported counts, and `pyfit` will figure out how to arrange them on your actual stock. There's no code coupling between the two projects — pyDome writes plain DXF files, and `pyfit`'s DXF importer doesn't know or care where a shape came from, the same way any CAD tool could read pyDome's output.
+pyLair's `-T/--face-templates` flag writes one DXF cutting template per unique panel shape (`<output>_facetype1.dxf`, ...) and reports a `panel_count` for each in its Bill of Materials. Point a `pyfit` job spec's `"dxf"` fields at those files and their `"quantity"` at the reported counts, and `pyfit` will figure out how to arrange them on your actual stock. There's no code coupling between the two projects — pyLair writes plain DXF files, and `pyfit`'s DXF importer doesn't know or care where a shape came from, the same way any CAD tool could read pyLair's output.
 
 ## MCP interface
 
@@ -82,7 +82,7 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 
 - **Candidate placement points aren't fully exhaustive.** The bottom-left-fill search considers the sheet's own corners, every NFP vertex, every NFP-vs-sheet-boundary crossing, and every NFP-vs-NFP crossing between different already-placed parts — this is what lets, for example, six unit squares tile a 3×2 sheet perfectly rather than needlessly spilling onto a second sheet. It still isn't full NFP-boundary tracing, so it can occasionally miss an even tighter placement. Every candidate is explicitly re-validated for overlap and sheet containment before being accepted, though, so this can only produce a *non-optimal* placement, never an *invalid* one.
 - **Rectangular sheets only.** No support (yet) for irregular stock outlines or offcuts with existing cutouts.
-- **Reusing scrap across sheets costs real search time on large, many-sheet jobs.** Every part instance now tries each already-opened sheet in turn, and each try means a full NFP-based candidate search against everything already placed there. A cheap area check skips sheets with too little *aggregate* remaining area to possibly fit (an exact, safe filter — it never wrongly skips a sheet that could actually fit), but a sheet can still have plenty of leftover area in a shape nothing fits, and that case still costs a full search per miss. Measured on a real 40-panel, 3-sheet job of small pyDome triangles: about 3x slower than the previous (no-reuse) behavior at the default rotation step, but back to roughly the same speed at a coarser one. `-R/--rotation-step` is the direct lever for this trade-off (fewer tried orientations means fewer NFP computations per sheet-miss) — widen it for a large job if packing feels slow, at the cost of a somewhat coarser search.
+- **Reusing scrap across sheets costs real search time on large, many-sheet jobs.** Every part instance now tries each already-opened sheet in turn, and each try means a full NFP-based candidate search against everything already placed there. A cheap area check skips sheets with too little *aggregate* remaining area to possibly fit (an exact, safe filter — it never wrongly skips a sheet that could actually fit), but a sheet can still have plenty of leftover area in a shape nothing fits, and that case still costs a full search per miss. Measured on a real 40-panel, 3-sheet job of small pyLair triangles: about 3x slower than the previous (no-reuse) behavior at the default rotation step, but back to roughly the same speed at a coarser one. `-R/--rotation-step` is the direct lever for this trade-off (fewer tried orientations means fewer NFP computations per sheet-miss) — widen it for a large job if packing feels slow, at the cost of a somewhat coarser search.
 
 ## Project structure
 
@@ -92,8 +92,8 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 | `pyfit/nfp.py` | No-fit-polygon computation via `pyclipper`, with the Minkowski-sum union fix described above. |
 | `pyfit/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress` callback (a heartbeat, fired per sheet tried per part instance) for the CLI/MCP progress reporting described above. |
 | `pyfit/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact for a rectangular sheet via bounding-box math, no NFP needed) and utilization reporting. |
-| `pyfit/io_dxf.py` | A minimal hand-written raw DXF reader (reconstructs closed loops from independent `LINE` entities, e.g. pyDome's face templates) and writer (one file per sheet), with no DXF library dependency — matching pyDome's own writers. |
-| `pyfit/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout (boundary plus every placed part's outline), the same role as pyDome's own preview module. |
+| `pyfit/io_dxf.py` | A minimal hand-written raw DXF reader (reconstructs closed loops from independent `LINE` entities, e.g. pyLair's face templates) and writer (one file per sheet), with no DXF library dependency — matching pyLair's own writers. |
+| `pyfit/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout (boundary plus every placed part's outline), the same role as pyLair's own preview module. |
 | `pyfit/api.py` | Programmatic entry point shared by the CLI and the MCP server: `run_nest(...)`/`load_part(...)` (job-spec parsing and packing) and `nest_result_report(...)`/`write_nest_files(...)` (structured report and file output), all `ValueError`-raising on bad input rather than printing and exiting. |
 | `pyfit/mcp_server.py` | MCP server (`pyfit-mcp` console command, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools built on `pyfit/api.py`. |
 | `pyfit/cli.py` | `getopt`-based command-line entry point, built on `pyfit/api.py`. |

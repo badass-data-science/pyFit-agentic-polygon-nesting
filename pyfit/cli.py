@@ -61,7 +61,7 @@ Required Command-Line Input:
 \t\t  ]
 \t\t}
 \t\tEach part gives its outline either as "dxf" (a path to a DXF file containing exactly one closed
-\t\tloop, e.g. one of pyDome's own "-T/--face-templates" panel cutting templates) or "polygon" (an
+\t\tloop, e.g. one of pyLair's own "-T/--face-templates" panel cutting templates) or "polygon" (an
 \t\tinline list of [x, y] points), plus "quantity" (how many of that shape are needed) and optionally
 \t\t"allow_mirror" (default true; set false for chirality-sensitive material, where a mirror-image
 \t\tplacement isn't interchangeable with the original).

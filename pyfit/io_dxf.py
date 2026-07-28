@@ -24,7 +24,7 @@ from typing import List
 from .geometry import Placement, Point, Sheet
 
 # Coordinate matching tolerance when reconstructing closed loops out of
-# independent LINE entities (e.g. pyDome's own face-template DXFs, which
+# independent LINE entities (e.g. pyLair's own face-template DXFs, which
 # are 3 separate LINE entities per triangle, not a closed POLYLINE):
 # endpoints within this distance of each other are treated as the same
 # vertex.
@@ -35,7 +35,7 @@ def _read_line_entities(path: str) -> List[tuple]:
   # Minimal raw DXF reader: walks the group-code stream looking for LINE
   # entities and their start (10/20)/end (11/21) coordinates, ignoring Z
   # (this package is 2D-only) and everything else (layers, colors,
-  # non-LINE entities). No DXF library dependency, matching pyDome's own
+  # non-LINE entities). No DXF library dependency, matching pyLair's own
   # hand-written DXF writers.
   with open(path) as f:
     lines = [line.rstrip("\n") for line in f]
