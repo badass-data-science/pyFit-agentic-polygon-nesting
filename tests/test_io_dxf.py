@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from sheetnest.geometry import Placement, Sheet
-from sheetnest.io_dxf import import_polygons_from_dxf, write_sheet_dxf
+from pyfit.geometry import Placement, Sheet
+from pyfit.io_dxf import import_polygons_from_dxf, write_sheet_dxf
 
 
 def _write_raw_dxf(path, segments):

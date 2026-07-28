@@ -5,7 +5,8 @@ spec format, algorithm explanation, known limitations) see [README.md](README.md
 
 ## What this is
 
-`agentic-irregular-polygon-nesting` (Python package/CLI command: `sheetnest`) is a
+**pyFit** (directory `pyFit-agentic-polygon-nesting`; distribution name, importable
+package, and CLI command are all `pyfit`) is a
 general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D
 shapes and how many of each are needed, it arranges them onto rectangular sheet
 stock with minimal wasted material, via a no-fit-polygon (NFP) bottom-left-fill
@@ -25,7 +26,7 @@ pip install -e ".[test]"
 ```
 
 Optional extra: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, since
-`mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `sheetnest/mcp_server.py`'s
+`mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `pyfit/mcp_server.py`'s
 `FastMCP`/`Image` imports and `tests/test_mcp_server.py` both 404 on 2.0.0's new
 module layout).
 
@@ -35,7 +36,7 @@ module layout).
 pytest
 ```
 
-- One test module per `sheetnest/*.py` source module, plus `tests/test_cli.py`
+- One test module per `pyfit/*.py` source module, plus `tests/test_cli.py`
   (subprocess-level CLI integration tests) and `tests/test_mcp_server.py`
   (direct calls into the `@mcp.tool()`-decorated functions, auto-skipped via
   `pytest.importorskip("mcp")` unless the `mcp` extra is installed — same
@@ -53,17 +54,17 @@ you're editing.
 
 | File | Responsibility |
 |---|---|
-| `sheetnest/geometry.py` | `Part`/`Sheet`/`Placement`/`NestResult` data model, plus polygon transforms (rotate/mirror/translate about a local origin) and area/bounding-box helpers. |
-| `sheetnest/nfp.py` | No-fit-polygon computation via `pyclipper`, with a Minkowski-sum union fix (see below). |
-| `sheetnest/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress(placed, total, sheet_index)` callback (see "Progress reporting" below). |
-| `sheetnest/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact bounding-box math, no NFP needed) and utilization reporting. |
-| `sheetnest/io_dxf.py` | A minimal hand-written raw DXF reader/writer, no DXF library dependency. |
-| `sheetnest/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout. |
-| `sheetnest/api.py` | Shared entry point for the CLI and MCP server: `load_part`/`run_nest` (job-spec parsing + packing, `ValueError` on bad input) and `nest_result_report`/`write_nest_files` (structured report / file output). |
-| `sheetnest/mcp_server.py` | MCP server (`sheetnest-mcp`, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest`, all built on `api.py`. |
-| `sheetnest/cli.py` | `getopt`-based command-line entry point, built on `api.py`. |
+| `pyfit/geometry.py` | `Part`/`Sheet`/`Placement`/`NestResult` data model, plus polygon transforms (rotate/mirror/translate about a local origin) and area/bounding-box helpers. |
+| `pyfit/nfp.py` | No-fit-polygon computation via `pyclipper`, with a Minkowski-sum union fix (see below). |
+| `pyfit/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress(placed, total, sheet_index)` callback (see "Progress reporting" below). |
+| `pyfit/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact bounding-box math, no NFP needed) and utilization reporting. |
+| `pyfit/io_dxf.py` | A minimal hand-written raw DXF reader/writer, no DXF library dependency. |
+| `pyfit/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout. |
+| `pyfit/api.py` | Shared entry point for the CLI and MCP server: `load_part`/`run_nest` (job-spec parsing + packing, `ValueError` on bad input) and `nest_result_report`/`write_nest_files` (structured report / file output). |
+| `pyfit/mcp_server.py` | MCP server (`pyfit-mcp`, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest`, all built on `api.py`. |
+| `pyfit/cli.py` | `getopt`-based command-line entry point, built on `api.py`. |
 
-## A real gotcha worth knowing about (`sheetnest/nfp.py`)
+## A real gotcha worth knowing about (`pyfit/nfp.py`)
 
 `pyclipper.MinkowskiSum` on a closed path doesn't return a single resolved
 polygon — it returns the *raw* sweep contours, which for a small pattern swept
@@ -115,12 +116,16 @@ MVP scope cut.
 
 ## Naming note
 
-The distribution name is `agentic-irregular-polygon-nesting` (this directory,
-`pyproject.toml`'s `name`, README title) but the importable Python package,
-console-script command, and all internal module paths are still `sheetnest` —
-this was a deliberate partial rename (2026-07-28) to avoid touching every
-import/test. Don't "fix" this into a full rename without checking with the user
-first.
+This project has been renamed twice (both 2026-07-28): first **Sheet-Nesting** →
+**agentic-irregular-polygon-nesting** (directory + `pyproject.toml` distribution
+name only, package/CLI left as `sheetnest` — a deliberate partial rename at the
+time), then **agentic-irregular-polygon-nesting** → **pyFit**
+(`pyFit-agentic-polygon-nesting` directory, `pyfit` distribution name, and this
+time a *full* rename: the package folder, all internal imports, the CLI command,
+and the MCP console script all became `pyfit`/`pyfit-mcp`, matching pyLair's own
+convention of distribution name = package name = CLI command). If you find a
+stray `sheetnest` reference anywhere, it's a leftover from the first rename that
+should become `pyfit`, not a second naming scheme to preserve.
 
 ## Docs stay in sync
 

@@ -1,5 +1,5 @@
-from sheetnest.geometry import Placement, Sheet
-from sheetnest.preview import render_sheet_preview_png_bytes, save_sheet_preview
+from pyfit.geometry import Placement, Sheet
+from pyfit.preview import render_sheet_preview_png_bytes, save_sheet_preview
 
 
 def _placement(polygon, sheet_index=0):

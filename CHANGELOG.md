@@ -13,18 +13,26 @@ by date instead.
 - Renamed the project from **Sheet-Nesting** to
   **agentic-irregular-polygon-nesting** (directory and `pyproject.toml`
   distribution name). The importable Python package, console-script command,
-  and internal module paths are unchanged (`sheetnest`).
+  and internal module paths were left unchanged at the time (`sheetnest`) —
+  see the second rename below, same day.
 - Switched license from GPL-3.0-or-later to MIT; added `LICENSE`.
 - Updated the blog post's pyDome references to pyLair, and fixed its links to
   point to pyLair's own repo and this project's renamed directory.
+- Renamed the project again, same day, from **agentic-irregular-polygon-nesting**
+  to **pyFit** (directory now `pyFit-agentic-polygon-nesting`). This time it's a
+  full rename: the distribution name, the importable package (`sheetnest/` →
+  `pyfit/`), the CLI command (`sheetnest` → `pyfit`), and the MCP console script
+  (`sheetnest-mcp` → `pyfit-mcp`) are all `pyfit`, matching pyLair's own
+  convention. All source file license headers were also brought in line with
+  the MIT switch above (they'd still said GPL).
 
 ### Added
 
 - `AGENTS.md`: agent-facing guide to setup, testing, module layout, and the
   Minkowski-sum NFP gotcha.
-- MCP interface (`sheetnest-mcp`, optional `mcp` extra): a `FastMCP` server
+- MCP interface (`pyfit-mcp`, optional `mcp` extra): a `FastMCP` server
   exposing `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools,
-  mirroring pyLair's own MCP server pattern. `sheetnest/api.py` factors the
+  mirroring pyLair's own MCP server pattern. `pyfit/api.py` factors the
   job-spec parsing and packing logic (previously private to `cli.py`) into a
   shared entry point (`load_part`, `run_nest`, `nest_result_report`,
   `write_nest_files`) used by both the CLI and the MCP server.
@@ -62,7 +70,9 @@ by date instead.
   bottom-left-fill placement heuristic trying a range of rotation angles and
   mirrored orientations per part.
 - DXF and inline-polygon part input; DXF and JSON report output per sheet.
-- `sheetnest` CLI (`sheetnest -j job.json -o output/nest`).
+- `sheetnest` CLI (`sheetnest -j job.json -o output/nest`) — see the
+  2026-07-28 entries above for this project's two subsequent renames; the
+  CLI command is `pyfit` as of the second one.
 - Test suite covering geometry, NFP, packing, DXF I/O, and CLI integration.
 - Blog post introducing the project and its relationship to pyLair (then
   pyDome).

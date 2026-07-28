@@ -1,6 +1,6 @@
 import pytest
 
-from sheetnest.geometry import (
+from pyfit.geometry import (
     bounding_box,
     mirror_polygon,
     orient_ccw,

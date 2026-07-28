@@ -3,8 +3,8 @@ from itertools import combinations, groupby
 import pytest
 from shapely.geometry import Polygon
 
-from sheetnest.geometry import Part, Sheet
-from sheetnest.packer import pack
+from pyfit.geometry import Part, Sheet
+from pyfit.packer import pack
 
 
 def _assert_no_overlaps_per_sheet(result):

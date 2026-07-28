@@ -1,6 +1,6 @@
 import pytest
 
-from sheetnest.nfp import no_fit_polygon
+from pyfit.nfp import no_fit_polygon
 
 
 def test_nfp_of_two_unit_squares_is_the_hand_computable_2x2_square():

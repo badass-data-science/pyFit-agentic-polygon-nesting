@@ -5,7 +5,7 @@ import sys
 
 def run_cli(args, cwd=None):
     return subprocess.run(
-        [sys.executable, "-m", "sheetnest", *args],
+        [sys.executable, "-m", "pyfit", *args],
         capture_output=True,
         text=True,
         cwd=cwd,

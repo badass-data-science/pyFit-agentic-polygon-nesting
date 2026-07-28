@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sheetnest.api import load_part, run_nest, nest_result_report, write_nest_files
+from pyfit.api import load_part, run_nest, nest_result_report, write_nest_files
 
 
 UNIT_SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]]

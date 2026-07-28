@@ -5,7 +5,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
-from sheetnest.mcp_server import design_nest, preview_nest, get_nest_report, export_nest
+from pyfit.mcp_server import design_nest, preview_nest, get_nest_report, export_nest
 
 
 #

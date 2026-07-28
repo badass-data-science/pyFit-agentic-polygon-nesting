@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentic-irregular-polygon-nesting"
+name = "pyfit"
 version = "0.0.1"
 description = "A general-purpose 2D irregular-polygon nesting (bin-packing) tool: arranges a set of 2D shapes onto rectangular sheet stock with minimal waste, via a no-fit-polygon bottom-left-fill heuristic."
 readme = "README.md"
@@ -23,11 +23,11 @@ test = ["pytest"]
 mcp = ["mcp<2.0"]
 
 [project.scripts]
-sheetnest = "sheetnest.cli:main"
-sheetnest-mcp = "sheetnest.mcp_server:main"
+pyfit = "pyfit.cli:main"
+pyfit-mcp = "pyfit.mcp_server:main"
 
 [tool.setuptools]
-packages = ["sheetnest"]
+packages = ["pyfit"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

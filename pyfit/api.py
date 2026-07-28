@@ -1,4 +1,4 @@
-#    agentic-irregular-polygon-nesting:  A general-purpose 2D nesting (bin-packing) tool
+#    pyFit:  A general-purpose 2D nesting (bin-packing) tool
 #    Copyright (c) 2026 Emily Williams
 #
 #    Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,7 +20,7 @@
 #    THE SOFTWARE.
 
 #
-# Shared programmatic entry point used by both the `sheetnest` CLI and the
+# Shared programmatic entry point used by both the `pyfit` CLI and the
 # MCP server, so job-spec parsing and packing logic lives in exactly one
 # place. Domain errors (a malformed part spec, a bad job spec) raise
 # ValueError rather than printing and exiting, so callers -- including

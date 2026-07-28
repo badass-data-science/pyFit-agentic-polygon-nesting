@@ -1,4 +1,4 @@
-#    agentic-irregular-polygon-nesting:  A general-purpose 2D nesting (bin-packing) tool
+#    pyFit:  A general-purpose 2D nesting (bin-packing) tool
 #    Copyright (c) 2026 Emily Williams
 #
 #    Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,13 +20,13 @@
 #    THE SOFTWARE.
 
 #
-# MCP server exposing sheetnest as tools for an agentic assistant to nest
+# MCP server exposing pyfit as tools for an agentic assistant to nest
 # parts onto sheet stock interactively: try a job spec, see each sheet's
 # layout rendered inline, get a structured placement report -- all
-# without shelling out to the `sheetnest` CLI and parsing stdout. Mirrors
+# without shelling out to the `pyfit` CLI and parsing stdout. Mirrors
 # pyLair's own mcp_server.py (design/preview/report/export tools, all
 # built on a shared api.py). Requires the optional `mcp` dependency
-# (`pip install -e ".[mcp]"`); console script `sheetnest-mcp`.
+# (`pip install -e ".[mcp]"`); console script `pyfit-mcp`.
 #
 import asyncio
 from typing import List, Optional
@@ -36,7 +36,7 @@ from mcp.server.fastmcp import Context, FastMCP, Image
 from .api import run_nest, nest_result_report, write_nest_files
 from .preview import render_sheet_preview_png_bytes
 
-mcp = FastMCP("sheetnest")
+mcp = FastMCP("pyfit")
 
 # Shared parameters across all four tools:
 #   sheet_width, sheet_height, parts, rotation_step_degrees
@@ -135,7 +135,7 @@ async def export_nest(output_path: str, sheet_width: float, sheet_height: float,
                        parts: List[dict], rotation_step_degrees: float = 15.0,
                        preview: bool = False, ctx: Optional[Context] = None) -> dict:
   """Pack a set of parts and write output files to disk (mirrors the
-  `sheetnest` CLI): one DXF per sheet actually used, written to
+  `pyfit` CLI): one DXF per sheet actually used, written to
   "<output_path>_sheet<N>.dxf". preview=True also writes
   "<output_path>_sheet<N>.png". Returns the list of files written
   alongside the full placement report. Reports MCP progress (a
