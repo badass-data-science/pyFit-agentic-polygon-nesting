@@ -25,6 +25,8 @@ sheetnest -j job.json -o output/nest
 
 writes `output/nest_sheet1.dxf`, `output/nest_sheet2.dxf`, ... (one file per sheet actually used) plus `output/nest_report.json`, and prints the same report to stdout. Add `-P/--preview` to also write `output/nest_sheet1.png`, ... — a quick 2D render of each sheet's layout (boundary plus every placed part's outline) for a fast sanity check without opening a DXF viewer.
 
+While a large job packs, `sheetnest` prints a `placed N/M parts (checking sheet K)...` heartbeat to stderr every couple of seconds, so a slow run doesn't look frozen (stdout stays clean JSON either way). Pass `-q/--quiet` to suppress it.
+
 A job spec is JSON describing the sheet size and the parts to nest:
 
 ```json
@@ -62,6 +64,8 @@ This provides a `sheetnest-mcp` console command: an [MCP](https://modelcontextpr
 
 Configure it in an MCP client (e.g. Claude Code/Desktop) by pointing at the `sheetnest-mcp` command. All four tools share the same validation as the CLI (`sheetnest/api.py:run_nest`/`load_part`) — a malformed job spec or an out-of-range rotation step raises a clear error rather than producing a bad or silent result.
 
+All four tools also report [MCP progress notifications](https://modelcontextprotocol.io) on a large job, if the calling client requested them (i.e. sent a progress token): a heartbeat each time the packer tries a sheet for the current part instance, so a slow call doesn't look frozen mid-request. This works because packing itself runs in a worker thread while the tool `await`s it, keeping the server's event loop free to actually send those notifications out. With no progress token (or when calling the tool functions directly, e.g. in tests), this is simply a no-op.
+
 ## How it works
 
 A closed 2D shape's set of legal (non-overlapping) placements relative to another fixed shape is described by their **no-fit-polygon (NFP)**: the region a moving shape's reference point must stay outside of to avoid overlapping the stationary one. `sheetnest` computes NFPs via [`pyclipper`](https://github.com/fonttools/pyclipper) (Python bindings to the mature Clipper library) using the standard Minkowski-sum technique, verified against a hand-computable case (the NFP of two unit squares is exactly the 2×2 square from (-1,-1) to (1,1)) before anything was built on top of it.
@@ -86,7 +90,7 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 |---|---|
 | `sheetnest/geometry.py` | `Part`/`Sheet`/`Placement`/`NestResult` data model, plus polygon transforms (rotate/mirror/translate about a local origin) and area/bounding-box helpers. |
 | `sheetnest/nfp.py` | No-fit-polygon computation via `pyclipper`, with the Minkowski-sum union fix described above. |
-| `sheetnest/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one. |
+| `sheetnest/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress` callback (a heartbeat, fired per sheet tried per part instance) for the CLI/MCP progress reporting described above. |
 | `sheetnest/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact for a rectangular sheet via bounding-box math, no NFP needed) and utilization reporting. |
 | `sheetnest/io_dxf.py` | A minimal hand-written raw DXF reader (reconstructs closed loops from independent `LINE` entities, e.g. pyDome's face templates) and writer (one file per sheet), with no DXF library dependency — matching pyDome's own writers. |
 | `sheetnest/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout (boundary plus every placed part's outline), the same role as pyDome's own preview module. |

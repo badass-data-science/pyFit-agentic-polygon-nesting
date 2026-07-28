@@ -152,3 +152,36 @@ def test_nonpositive_rotation_step_reports_a_clear_error(tmp_path):
         result = run_cli(["-j", str(job), "-o", str(out), "-R", step])
         assert result.returncode != 0
         assert "rotation-step" in result.stdout.lower()
+
+
+def test_progress_heartbeat_is_printed_to_stderr_by_default(tmp_path):
+    job = tmp_path / "job.json"
+    job.write_text(json.dumps({
+        "sheet": {"width": 3, "height": 2},
+        "parts": [{"name": "sq", "polygon": [[0, 0], [1, 0], [1, 1], [0, 1]], "quantity": 6,
+                   "allow_mirror": False}],
+    }))
+    out = tmp_path / "nest"
+
+    result = run_cli(["-j", str(job), "-o", str(out), "-R", "90"])
+
+    assert result.returncode == 0
+    assert "placed" in result.stderr.lower()
+    assert "checking sheet" in result.stderr.lower()
+    # the heartbeat is on stderr, not mixed into stdout's JSON report
+    assert "placed" not in result.stdout.lower()
+
+
+def test_quiet_flag_suppresses_the_progress_heartbeat(tmp_path):
+    job = tmp_path / "job.json"
+    job.write_text(json.dumps({
+        "sheet": {"width": 3, "height": 2},
+        "parts": [{"name": "sq", "polygon": [[0, 0], [1, 0], [1, 1], [0, 1]], "quantity": 6,
+                   "allow_mirror": False}],
+    }))
+    out = tmp_path / "nest"
+
+    result = run_cli(["-j", str(job), "-o", str(out), "-R", "90", "-q"])
+
+    assert result.returncode == 0
+    assert result.stderr == ""

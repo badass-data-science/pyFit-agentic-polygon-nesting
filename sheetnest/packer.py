@@ -15,7 +15,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from itertools import combinations
-from typing import List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from shapely.geometry import Polygon as ShapelyPolygon, LinearRing, box
 
@@ -107,15 +107,27 @@ def _valid_candidate_points(bounds: Tuple[float, float, float, float], oriented_
   return valid
 
 
-def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -> NestResult:
+def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
+         on_progress: Optional[Callable[[int, int, int], None]] = None) -> NestResult:
   # Bottom-left-fill with NFP-based collision avoidance: a heuristic, not
   # a globally optimal solver (irregular 2D bin-packing is NP-hard) --
   # see nfp.py and this package's README for the algorithm and its known
   # limitations.
+  #
+  # on_progress, if given, is called as on_progress(placed_so_far,
+  # total_instances, sheet_index) once per sheet tried for the current
+  # part instance -- i.e. more than once per part on a scrap-reuse-heavy
+  # job that has to check several already-opened sheets before finding
+  # room, which is exactly the case where a single part instance's own
+  # placement can take a while. It's a heartbeat, not a percentage: an
+  # instance count alone can go quiet for a long stretch if one instance
+  # is expensive to place, which is the scenario a caller displaying
+  # "still working" progress most needs to hear about.
   instances: List[Part] = []
   for part in parts:
     instances.extend([part] * part.quantity)
   instances.sort(key=lambda p: polygon_area(p.polygon), reverse=True)
+  total_instances = len(instances)
 
   placements: List[Placement] = []
   sheets_polygons: List[List[List]] = [[]]
@@ -136,6 +148,9 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0) -
     part_area = polygon_area(part.polygon)
 
     while not placed_this_part:
+      if on_progress is not None:
+        on_progress(len(placements), total_instances, sheet_index)
+
       if sheet_index >= len(sheets_polygons):
         sheets_polygons.append([])
         sheets_placed_area.append(0.0)

@@ -129,3 +129,45 @@ def test_scrap_on_an_earlier_sheet_is_reused_instead_of_opening_a_new_one():
     assert small_placement.sheet_index == 0
     _assert_no_overlaps_per_sheet(result)
     _assert_within_sheet_bounds(result, sheet)
+
+
+def test_on_progress_fires_at_least_once_per_placed_instance():
+    square = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    parts = [Part(name="sq", polygon=square, quantity=6, allow_mirror=False)]
+    sheet = Sheet(width=3, height=2)
+    calls = []
+
+    result = pack(parts, sheet, rotation_step_degrees=90,
+                   on_progress=lambda placed, total, sheet_index: calls.append((placed, total, sheet_index)))
+
+    assert result.sheets_used == 1
+    assert len(calls) >= 6  # at least once per instance; more if a sheet retry happens
+    assert all(total == 6 for _, total, _ in calls)
+    # placed counts are non-decreasing and start at 0 (nothing placed yet
+    # for the very first call)
+    assert calls[0][0] == 0
+    assert [c[0] for c in calls] == sorted(c[0] for c in calls)
+    assert calls[-1][0] == 5  # last call happens before the 6th (final) instance is placed
+
+
+def test_on_progress_reports_a_higher_sheet_index_when_earlier_sheets_are_full():
+    # same fixture as the scrap-reuse test above: "small" has to be
+    # offered sheet 0 (where it fits) after "med" fills sheet 1, so
+    # on_progress should see sheet_index 0 among its calls for "small",
+    # not just whatever the previous part happened to end on
+    sheet = Sheet(width=3, height=2)
+    big = [(0, 0), (2, 0), (2, 2), (0, 2)]
+    med = [(0, 0), (2.5, 0), (2.5, 1.5), (0, 1.5)]
+    small = [(0, 0), (0.6, 0), (0.6, 0.6), (0, 0.6)]
+    parts = [
+        Part(name="big", polygon=big, quantity=1, allow_mirror=False),
+        Part(name="med", polygon=med, quantity=1, allow_mirror=False),
+        Part(name="small", polygon=small, quantity=1, allow_mirror=False),
+    ]
+    sheet_indices_seen = []
+
+    pack(parts, sheet, rotation_step_degrees=90,
+         on_progress=lambda placed, total, sheet_index: sheet_indices_seen.append(sheet_index))
+
+    assert 0 in sheet_indices_seen
+    assert max(sheet_indices_seen) >= 1

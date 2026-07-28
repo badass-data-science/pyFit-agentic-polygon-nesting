@@ -27,7 +27,7 @@
 # FastMCP's tool dispatcher, which turns an uncaught ValueError into an
 # isError=True tool result -- can handle them however's appropriate.
 #
-from typing import List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from .geometry import Part, Sheet, NestResult
 from .io_dxf import import_polygons_from_dxf, write_sheet_dxf
@@ -67,20 +67,25 @@ def load_part(spec: dict) -> Part:
   )
 
 
-def run_nest(job: dict, rotation_step_degrees: float = 15.0) -> Tuple[Sheet, NestResult]:
+def run_nest(job: dict, rotation_step_degrees: float = 15.0,
+             on_progress: Optional[Callable[[int, int, int], None]] = None) -> Tuple[Sheet, NestResult]:
   """Parse a job spec dict ({"sheet": {"width", "height"}, "parts": [...]})
   and run the bottom-left-fill packer. Returns the parsed Sheet alongside
   the NestResult so callers that go on to write files (see
   write_nest_files) don't have to re-parse the job spec. Raises
   ValueError on a malformed job/part spec or a rotation step outside
-  (0, 360)."""
+  (0, 360).
+
+  on_progress, if given, is forwarded to packer.pack (see there for its
+  signature and how often it fires) -- a heartbeat for a caller that
+  wants to show a large job is still working, not frozen."""
   if not (0 < rotation_step_degrees < 360):
     raise ValueError(
         'rotation_step_degrees (CLI: -R/--rotation-step) must be greater than zero and less than 360.')
 
   sheet = Sheet(width=float(job["sheet"]["width"]), height=float(job["sheet"]["height"]))
   parts = [load_part(spec) for spec in job["parts"]]
-  result = pack(parts, sheet, rotation_step_degrees=rotation_step_degrees)
+  result = pack(parts, sheet, rotation_step_degrees=rotation_step_degrees, on_progress=on_progress)
   return sheet, result
 
 

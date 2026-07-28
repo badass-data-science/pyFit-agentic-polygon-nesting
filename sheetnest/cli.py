@@ -17,8 +17,29 @@
 import getopt
 import json
 import sys
+import time
 
 from .api import run_nest, nest_result_report, write_nest_files
+
+# Minimum time between progress heartbeats printed to stderr -- packer.pack
+# can call on_progress far more often than this on a large or scrap-reuse-
+# heavy job (see packer.py), so this throttles wall-clock output rate, not
+# how often the packer itself reports in.
+PROGRESS_MIN_INTERVAL_SECONDS = 2.0
+
+
+def _make_progress_printer():
+  state = {'last_printed': 0.0}
+
+  def _on_progress(placed, total, sheet_index):
+    now = time.monotonic()
+    if now - state['last_printed'] < PROGRESS_MIN_INTERVAL_SECONDS:
+      return
+    state['last_printed'] = now
+    print('sheetnest: placed %d/%d parts (checking sheet %d)...' % (placed, total, sheet_index + 1),
+          file=sys.stderr, flush=True)
+
+  return _on_progress
 
 
 def display_help():
@@ -53,6 +74,9 @@ Options:
 \t\tof each sheet's layout -- the sheet boundary plus every placed part's outline -- so a result can
 \t\tbe sanity-checked without opening a DXF viewer.
 
+\t-q, --quiet\tSuppress the "placed N/M parts..." progress heartbeat this command otherwise prints to
+\t\tstderr every couple of seconds while packing a large job, so a slow run doesn't look frozen.
+
 \t-h, --help\tShow usage and exit.
 """
   print(help_text)
@@ -63,14 +87,15 @@ def main():
   output_path = None
   rotation_step_degrees = 15.0
   preview_output = False
+  quiet = False
 
   if len(sys.argv[1:]) == 0:
     display_help()
     sys.exit(-1)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Ph',
-                                ['job=', 'output=', 'rotation-step=', 'preview', 'help'])
+    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Pqh',
+                                ['job=', 'output=', 'rotation-step=', 'preview', 'quiet', 'help'])
   except getopt.error as msg:
     print(str(msg) + ' (for help use --help)')
     sys.exit(-1)
@@ -85,6 +110,8 @@ def main():
       output_path = a
     if o in ('-P', '--preview'):
       preview_output = True
+    if o in ('-q', '--quiet'):
+      quiet = True
     if o in ('-R', '--rotation-step'):
       try:
         rotation_step_degrees = float(a)
@@ -102,8 +129,10 @@ def main():
   with open(job_path) as f:
     job = json.load(f)
 
+  on_progress = None if quiet else _make_progress_printer()
+
   try:
-    sheet, result = run_nest(job, rotation_step_degrees=rotation_step_degrees)
+    sheet, result = run_nest(job, rotation_step_degrees=rotation_step_degrees, on_progress=on_progress)
   except ValueError as e:
     print(str(e))
     sys.exit(-1)
