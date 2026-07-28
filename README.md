@@ -25,6 +25,8 @@ sheetnest -j job.json -o output/nest
 
 writes `output/nest_sheet1.dxf`, `output/nest_sheet2.dxf`, ... (one file per sheet actually used) plus `output/nest_report.json`, and prints the same report to stdout. Add `-P/--preview` to also write `output/nest_sheet1.png`, ... — a quick 2D render of each sheet's layout (boundary plus every placed part's outline) for a fast sanity check without opening a DXF viewer.
 
+While a large job packs, `sheetnest` prints a `placed N/M parts (checking sheet K)...` heartbeat to stderr every couple of seconds, so a slow run doesn't look frozen (stdout stays clean JSON either way). Pass `-q/--quiet` to suppress it.
+
 A job spec is JSON describing the sheet size and the parts to nest:
 
 ```json
@@ -42,6 +44,27 @@ Each part gives its outline either as `"dxf"` (a path to a DXF file containing e
 ### Using pyDome's panel templates as input
 
 pyDome's `-T/--face-templates` flag writes one DXF cutting template per unique panel shape (`<output>_facetype1.dxf`, ...) and reports a `panel_count` for each in its Bill of Materials. Point a `sheetnest` job spec's `"dxf"` fields at those files and their `"quantity"` at the reported counts, and `sheetnest` will figure out how to arrange them on your actual stock. There's no code coupling between the two projects — pyDome writes plain DXF files, and `sheetnest`'s DXF importer doesn't know or care where a shape came from, the same way any CAD tool could read pyDome's output.
+
+## MCP interface
+
+For agentic use (an LLM assistant interactively nesting parts), install the `mcp` extra:
+
+```
+pip install -e ".[mcp]"
+```
+
+This provides a `sheetnest-mcp` console command: an [MCP](https://modelcontextprotocol.io) server (stdio transport) exposing four tools, all sharing one parameter schema (`sheet_width`, `sheet_height`, `parts` — a list of job-spec part dicts, see above — and `rotation_step_degrees`):
+
+| Tool | Purpose |
+|---|---|
+| `design_nest` | Packs the parts (no files written) and returns sheets-used and per-sheet utilization — a cheap way to try job specs. |
+| `preview_nest` | Renders each sheet's 2D layout and returns them as inline images, so a result can be seen in-conversation before any file is written. |
+| `get_nest_report` | Returns the full placement report (sheet index, position, rotation, mirror flag per part instance) as structured data, no files. |
+| `export_nest` | Writes one DXF per sheet actually used to disk (optionally a preview PNG too, via `preview=True`). Returns the paths written plus the full placement report. |
+
+Configure it in an MCP client (e.g. Claude Code/Desktop) by pointing at the `sheetnest-mcp` command. All four tools share the same validation as the CLI (`sheetnest/api.py:run_nest`/`load_part`) — a malformed job spec or an out-of-range rotation step raises a clear error rather than producing a bad or silent result.
+
+All four tools also report [MCP progress notifications](https://modelcontextprotocol.io) on a large job, if the calling client requested them (i.e. sent a progress token): a heartbeat each time the packer tries a sheet for the current part instance, so a slow call doesn't look frozen mid-request. This works because packing itself runs in a worker thread while the tool `await`s it, keeping the server's event loop free to actually send those notifications out. With no progress token (or when calling the tool functions directly, e.g. in tests), this is simply a no-op.
 
 ## How it works
 
@@ -67,11 +90,13 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 |---|---|
 | `sheetnest/geometry.py` | `Part`/`Sheet`/`Placement`/`NestResult` data model, plus polygon transforms (rotate/mirror/translate about a local origin) and area/bounding-box helpers. |
 | `sheetnest/nfp.py` | No-fit-polygon computation via `pyclipper`, with the Minkowski-sum union fix described above. |
-| `sheetnest/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one. |
+| `sheetnest/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress` callback (a heartbeat, fired per sheet tried per part instance) for the CLI/MCP progress reporting described above. |
 | `sheetnest/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact for a rectangular sheet via bounding-box math, no NFP needed) and utilization reporting. |
 | `sheetnest/io_dxf.py` | A minimal hand-written raw DXF reader (reconstructs closed loops from independent `LINE` entities, e.g. pyDome's face templates) and writer (one file per sheet), with no DXF library dependency — matching pyDome's own writers. |
 | `sheetnest/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout (boundary plus every placed part's outline), the same role as pyDome's own preview module. |
-| `sheetnest/cli.py` | `getopt`-based command-line entry point. |
+| `sheetnest/api.py` | Programmatic entry point shared by the CLI and the MCP server: `run_nest(...)`/`load_part(...)` (job-spec parsing and packing) and `nest_result_report(...)`/`write_nest_files(...)` (structured report and file output), all `ValueError`-raising on bad input rather than printing and exiting. |
+| `sheetnest/mcp_server.py` | MCP server (`sheetnest-mcp` console command, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools built on `sheetnest/api.py`. |
+| `sheetnest/cli.py` | `getopt`-based command-line entry point, built on `sheetnest/api.py`. |
 | `tests/` | pytest suite: unit tests per module, plus subprocess-level CLI integration tests. |
 
 ## License

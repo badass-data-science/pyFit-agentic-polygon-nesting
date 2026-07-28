@@ -17,11 +17,29 @@
 import getopt
 import json
 import sys
+import time
 
-from .geometry import Part, Sheet
-from .io_dxf import import_polygons_from_dxf, write_sheet_dxf
-from .packer import pack
-from .preview import save_sheet_preview
+from .api import run_nest, nest_result_report, write_nest_files
+
+# Minimum time between progress heartbeats printed to stderr -- packer.pack
+# can call on_progress far more often than this on a large or scrap-reuse-
+# heavy job (see packer.py), so this throttles wall-clock output rate, not
+# how often the packer itself reports in.
+PROGRESS_MIN_INTERVAL_SECONDS = 2.0
+
+
+def _make_progress_printer():
+  state = {'last_printed': 0.0}
+
+  def _on_progress(placed, total, sheet_index):
+    now = time.monotonic()
+    if now - state['last_printed'] < PROGRESS_MIN_INTERVAL_SECONDS:
+      return
+    state['last_printed'] = now
+    print('sheetnest: placed %d/%d parts (checking sheet %d)...' % (placed, total, sheet_index + 1),
+          file=sys.stderr, flush=True)
+
+  return _on_progress
 
 
 def display_help():
@@ -56,31 +74,12 @@ Options:
 \t\tof each sheet's layout -- the sheet boundary plus every placed part's outline -- so a result can
 \t\tbe sanity-checked without opening a DXF viewer.
 
+\t-q, --quiet\tSuppress the "placed N/M parts..." progress heartbeat this command otherwise prints to
+\t\tstderr every couple of seconds while packing a large job, so a slow run doesn't look frozen.
+
 \t-h, --help\tShow usage and exit.
 """
   print(help_text)
-
-
-def _load_part(spec: dict) -> Part:
-  if "dxf" in spec:
-    loops = import_polygons_from_dxf(spec["dxf"])
-    if len(loops) != 1:
-      print('Part %r: DXF file %r must contain exactly one closed loop, found %d. Exiting.'
-            % (spec.get("name", "?"), spec["dxf"], len(loops)))
-      sys.exit(-1)
-    polygon = loops[0]
-  elif "polygon" in spec:
-    polygon = [(float(x), float(y)) for x, y in spec["polygon"]]
-  else:
-    print('Part %r must specify either "dxf" or "polygon". Exiting.' % spec.get("name", "?"))
-    sys.exit(-1)
-
-  return Part(
-    name=spec["name"],
-    polygon=polygon,
-    quantity=int(spec["quantity"]),
-    allow_mirror=bool(spec.get("allow_mirror", True)),
-  )
 
 
 def main():
@@ -88,14 +87,15 @@ def main():
   output_path = None
   rotation_step_degrees = 15.0
   preview_output = False
+  quiet = False
 
   if len(sys.argv[1:]) == 0:
     display_help()
     sys.exit(-1)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Ph',
-                                ['job=', 'output=', 'rotation-step=', 'preview', 'help'])
+    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Pqh',
+                                ['job=', 'output=', 'rotation-step=', 'preview', 'quiet', 'help'])
   except getopt.error as msg:
     print(str(msg) + ' (for help use --help)')
     sys.exit(-1)
@@ -110,14 +110,13 @@ def main():
       output_path = a
     if o in ('-P', '--preview'):
       preview_output = True
+    if o in ('-q', '--quiet'):
+      quiet = True
     if o in ('-R', '--rotation-step'):
       try:
         rotation_step_degrees = float(a)
       except ValueError:
         print('-R or --rotation-step argument must be a floating point number. Exiting.')
-        sys.exit(-1)
-      if not (0 < rotation_step_degrees < 360):
-        print('-R or --rotation-step argument must be greater than zero and less than 360. Exiting.')
         sys.exit(-1)
 
   if job_path is None:
@@ -130,44 +129,18 @@ def main():
   with open(job_path) as f:
     job = json.load(f)
 
-  sheet = Sheet(width=float(job["sheet"]["width"]), height=float(job["sheet"]["height"]))
-  parts = [_load_part(spec) for spec in job["parts"]]
+  on_progress = None if quiet else _make_progress_printer()
 
   try:
-    result = pack(parts, sheet, rotation_step_degrees=rotation_step_degrees)
+    sheet, result = run_nest(job, rotation_step_degrees=rotation_step_degrees, on_progress=on_progress)
   except ValueError as e:
     print(str(e))
     sys.exit(-1)
 
-  files_written = []
-  for sheet_index in range(result.sheets_used):
-    placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
-    sheet_path = '%s_sheet%d.dxf' % (output_path, sheet_index + 1)
-    write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
-    files_written.append(sheet_path)
+  files_written = write_nest_files(sheet, result, output_path, preview=preview_output)
 
-    if preview_output:
-      preview_path = '%s_sheet%d.png' % (output_path, sheet_index + 1)
-      save_sheet_preview(sheet, placements_on_sheet, preview_path,
-                          sheet_number=sheet_index + 1,
-                          utilization=result.utilization_by_sheet[sheet_index])
-      files_written.append(preview_path)
-
-  report = {
-    'sheets_used': result.sheets_used,
-    'utilization_by_sheet': result.utilization_by_sheet,
-    'files_written': files_written,
-    'placements': [
-      {
-        'part_name': p.part_name,
-        'sheet_index': p.sheet_index,
-        'position': list(p.position),
-        'rotation_degrees': p.rotation_degrees,
-        'mirrored': p.mirrored,
-      }
-      for p in result.placements
-    ],
-  }
+  report = nest_result_report(result)
+  report['files_written'] = files_written
   report_path = '%s_report.json' % output_path
   with open(report_path, 'w') as f:
     json.dump(report, f, indent=2)
