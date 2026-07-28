@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-irregular-polygon-nesting"
-version = "0.1.0"
+version = "0.0.1"
 description = "A general-purpose 2D irregular-polygon nesting (bin-packing) tool: arranges a set of 2D shapes onto rectangular sheet stock with minimal waste, via a no-fit-polygon bottom-left-fill heuristic."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
-  { name = "Emily Williams" },
+  { name = "Emily Marie Williams" },
 ]
 requires-python = ">=3.9"
 dependencies = [
