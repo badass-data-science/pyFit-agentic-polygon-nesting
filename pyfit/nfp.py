@@ -78,7 +78,7 @@ def no_fit_polygon(stationary: List[Point], moving: List[Point]) -> List[List[Po
   #
   # This union-of-solids treatment assumes the true result has no
   # legitimate holes, which holds for the convex shapes this package
-  # targets (pyDome's triangular panels, and irregular-but-simple shapes
+  # targets (pyLair's triangular panels, and irregular-but-simple shapes
   # generally) but would be wrong for a genuinely non-convex NFP with a
   # real unreachable pocket -- out of scope for this package.
   reflected_moving = [(-x, -y) for x, y in moving]

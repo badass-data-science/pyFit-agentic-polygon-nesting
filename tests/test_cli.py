@@ -71,15 +71,15 @@ def test_inline_polygon_job_nests_successfully_and_writes_expected_files(tmp_pat
 
 
 def test_dxf_sourced_job_nests_successfully(tmp_path):
-    pydome_output = None
+    pylair_output = None
     try:
-        import pydome.output as pydome_output
+        import pylair.output as pylair_output
     except ImportError:
         import pytest
-        pytest.skip("pydome not installed")
+        pytest.skip("pylair not installed")
 
     triangle_path = tmp_path / "facetype1.dxf"
-    pydome_output.OutputFaceTemplateDXF((3.0, 4.0, 5.0), str(triangle_path))
+    pylair_output.OutputFaceTemplateDXF((3.0, 4.0, 5.0), str(triangle_path))
 
     job_path = tmp_path / "job.json"
     job_path.write_text(json.dumps({

@@ -16,8 +16,9 @@ by date instead.
   and internal module paths were left unchanged at the time (`sheetnest`) —
   see the second rename below, same day.
 - Switched license from GPL-3.0-or-later to MIT; added `LICENSE`.
-- Updated the blog post's pyDome references to pyLair, and fixed its links to
-  point to pyLair's own repo and this project's renamed directory.
+- Updated the blog post's stale references to the geodesic dome project's
+  earlier name over to pyLair, and fixed its links to point to pyLair's own
+  repo and this project's renamed directory.
 - Renamed the project again, same day, from **agentic-irregular-polygon-nesting**
   to **pyFit** (directory now `pyFit-agentic-polygon-nesting`). This time it's a
   full rename: the distribution name, the importable package (`sheetnest/` →
@@ -74,5 +75,5 @@ by date instead.
   2026-07-28 entries above for this project's two subsequent renames; the
   CLI command is `pyfit` as of the second one.
 - Test suite covering geometry, NFP, packing, DXF I/O, and CLI integration.
-- Blog post introducing the project and its relationship to pyLair (then
-  pyDome).
+- Blog post introducing the project and its relationship to pyLair (called
+  by an earlier name at the time).
