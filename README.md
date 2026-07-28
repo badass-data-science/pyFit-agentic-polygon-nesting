@@ -1,5 +1,7 @@
 # pyFit
 
+![nesting-example](blog-posts/images/nest_sheet1_pylair_triangles.png)
+
 A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D shapes and how many of each you need, arranges them onto rectangular sheet stock (plywood, acrylic, sheet metal, ...) with minimal wasted material, and writes out a ready-to-cut **DXF file per sheet** (plus a JSON placement report) for your laser cutter or CNC router.
 
 This started as a follow-on to [pyLair](https://github.com/badass-data-science/pyLair-agentic-geodesics) — pyLair's Bill of Materials tells you exactly which triangular panel shapes a geodesic dome needs and how many of each, but has nothing to say about how to lay them out on actual material. `pyfit` is deliberately **not** a pyLair module, though — it's a standalone tool that happens to read the DXF files pyLair (or any other CAD tool) can produce, so it's equally usable for unrelated 2D cutting/fabrication problems.
