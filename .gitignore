@@ -4,3 +4,10 @@ __pycache__/
 .coverage
 .mypy_cache/
 .ruff_cache/
+
+# graphify: track only the shareable report artifacts, ignore everything else
+# (interpreter/root pointers, extraction cache, cost log, community labels)
+graphify-out/*
+!graphify-out/graph.html
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/graph.json
