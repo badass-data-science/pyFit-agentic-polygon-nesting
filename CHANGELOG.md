@@ -26,6 +26,14 @@ by date instead.
   (`sheetnest-mcp` → `pyfit-mcp`) are all `pyfit`, matching pyLair's own
   convention. All source file license headers were also brought in line with
   the MIT switch above (they'd still said GPL).
+- Made the project PyPI-ready. The PyPI distribution name is now
+  **pyfit-agentic-polygon-nesting** (`pyproject.toml`'s `[project] name`) —
+  `pyfit` is already taken on PyPI by an unrelated neural-net library, so the
+  "distribution name = package name = CLI command" convention from the rename
+  above no longer holds for the distribution name specifically; the
+  importable package and CLI/MCP console scripts are still `pyfit`/`pyfit-mcp`.
+  Bumped the version from `0.0.1` to `0.1.0` for this first publish-ready
+  release. See "Naming note" in `AGENTS.md` for the full history.
 
 ### Added
 
@@ -52,6 +60,11 @@ by date instead.
   `[tool.ruff]`/`[tool.mypy]` config to `pyproject.toml`; modernized
   `typing.List`/`Tuple`/`Optional` usage to PEP 585/604 builtin generics
   throughout to satisfy the new lint/type checks.
+- PyPI packaging metadata: `classifiers`, `keywords`, and `[project.urls]`
+  (Homepage/Repository/Issues/Changelog) in `pyproject.toml`, plus a
+  `pyfit/py.typed` marker (PEP 561) so downstream type checkers pick up this
+  package's type hints. Verified with `python -m build` + `twine check
+  dist/*`. Not yet published to PyPI.
 
 ## 2026-07-14
 

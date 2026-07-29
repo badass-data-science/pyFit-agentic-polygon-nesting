@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyfit"
-version = "0.0.1"
+name = "pyfit-agentic-polygon-nesting"
+version = "0.1.0"
 description = "A general-purpose 2D irregular-polygon nesting (bin-packing) tool: arranges a set of 2D shapes onto rectangular sheet stock with minimal waste, via a no-fit-polygon bottom-left-fill heuristic."
 readme = "README.md"
 license = { text = "MIT" }
@@ -12,11 +12,32 @@ authors = [
   { name = "Emily Marie Williams" },
 ]
 requires-python = ">=3.9"
+keywords = ["nesting", "bin-packing", "no-fit-polygon", "dxf", "cnc", "laser-cutting", "cutting-optimization"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
 dependencies = [
   "shapely",
   "pyclipper",
   "matplotlib",
 ]
+
+[project.urls]
+Homepage = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting"
+Repository = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting"
+Issues = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/issues"
+Changelog = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -29,6 +50,9 @@ pyfit-mcp = "pyfit.mcp_server:main"
 
 [tool.setuptools]
 packages = ["pyfit"]
+
+[tool.setuptools.package-data]
+pyfit = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

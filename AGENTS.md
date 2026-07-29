@@ -5,8 +5,9 @@ spec format, algorithm explanation, known limitations) see [README.md](README.md
 
 ## What this is
 
-**pyFit** (directory `pyFit-agentic-polygon-nesting`; distribution name, importable
-package, and CLI command are all `pyfit`) is a
+**pyFit** (directory `pyFit-agentic-polygon-nesting`; importable package and CLI
+command are `pyfit`/`pyfit-mcp`, but the PyPI distribution name is
+`pyfit-agentic-polygon-nesting` — see "Naming note" below for why it diverges) is a
 general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D
 shapes and how many of each are needed, it arranges them onto rectangular sheet
 stock with minimal wasted material, via a no-fit-polygon (NFP) bottom-left-fill
@@ -29,6 +30,19 @@ Optional extras: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, sinc
 `mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `pyfit/mcp_server.py`'s
 `FastMCP`/`Image` imports and `tests/test_mcp_server.py` both 404 on 2.0.0's new
 module layout), and `lint` (`ruff`, `mypy`, `types-shapely` — what CI runs).
+
+## Packaging / PyPI readiness
+
+`pyproject.toml` has PyPI-ready metadata: `classifiers`, `keywords`,
+`[project.urls]` (Homepage/Repository/Issues/Changelog, all pointing at this
+GitHub repo), and `[tool.setuptools.package-data]` shipping `pyfit/py.typed`
+(PEP 561 — this package's type hints are meant to be consumed by downstream
+type checkers, not just its own CI). Verify packaging changes with `python -m
+build` (needs the `build` package) followed by `twine check dist/*` (needs
+`twine`) before trusting them — `pyproject.toml` syntax errors and missing
+files don't otherwise surface until an actual publish attempt. Nothing has
+been published to PyPI yet; publishing is a separate, deliberate step (not
+something to do as a side effect of a metadata change).
 
 ## Test
 
@@ -131,6 +145,19 @@ and the MCP console script all became `pyfit`/`pyfit-mcp`, matching pyLair's own
 convention of distribution name = package name = CLI command). If you find a
 stray `sheetnest` reference anywhere, it's a leftover from the first rename that
 should become `pyfit`, not a second naming scheme to preserve.
+
+A third naming event happened on 2026-07-28 while making the project
+PyPI-ready: the PyPI distribution name became **pyfit-agentic-polygon-nesting**
+(matching the repo directory name), breaking the "distribution name = package
+name = CLI command" convention the second rename had established. This wasn't
+optional — PyPI already has an unrelated package named `pyfit` (a neural-net
+library), so publishing under that name isn't possible. The importable
+package, CLI command, and MCP console script are unaffected (still
+`pyfit`/`pyfit-mcp`); only `pyproject.toml`'s `[project] name` field and
+PyPI-facing install instructions changed. If you're about to rename this
+project again, check name availability on PyPI *before* picking a name (e.g.
+`curl -s https://pypi.org/pypi/<name>/json` — a 404 means available), not
+after.
 
 ## Docs stay in sync
 
