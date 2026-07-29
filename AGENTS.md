@@ -103,6 +103,7 @@ hand-matching the surrounding style.
 | `pyfit/__init__.py` | `__version__` (from installed package metadata via `importlib.metadata`, not hardcoded — don't duplicate `pyproject.toml`'s version here) and re-exports of the small public surface (`Part`, `Sheet`, `Placement`, `NestResult`, `pack`, `run_nest`, `load_part`, `nest_result_report`, `write_nest_files`), so `import pyfit` is directly useful. |
 | `skills/pyfit/SKILL.md` | OpenClaw skill (see "OpenClaw skill" below) teaching an OpenClaw agent when/how to invoke the `pyfit` CLI directly, no MCP setup required. |
 | `openclaw.config.snippet.jsonc` | A fragment for `~/.openclaw/openclaw.json` registering the skill above. |
+| `graphify-out/graph.html`, `graphify-out/GRAPH_REPORT.md`, `graphify-out/graph.json` | Tracked graphify knowledge-graph snapshot (see "Knowledge graph (graphify)" below). The rest of `graphify-out/` is gitignored. |
 
 ## A real gotcha worth knowing about (`pyfit/nfp.py`)
 
@@ -169,6 +170,38 @@ body's job-spec/flag description in sync with `cli.py`'s actual `argparse`
 definitions and README's "Usage" section if either changes — it's a third
 place (after README and the CLI's own `--help`) that duplicates this same
 information for a different audience (an agent, not a human).
+
+## Knowledge graph (graphify)
+
+`graphify-out/graph.html`/`GRAPH_REPORT.md`/`graph.json` are a tracked
+snapshot from running the [graphify](https://github.com/safishamsi/graphify)
+skill (`/graphify`) over this repo — nodes/edges for the codebase and docs,
+with community detection and an audit trail (EXTRACTED/INFERRED/AMBIGUOUS
+confidence per edge). `.gitignore` ignores everything else under
+`graphify-out/` (`.graphify_python`, `.graphify_root`, `cache/`, `cost.json`,
+`manifest.json`, `.graphify_labels.json`) as local/derived state that
+shouldn't be shared.
+
+This is a point-in-time snapshot, not auto-regenerated on every commit — it
+will drift as the codebase changes. Re-run `/graphify` and re-commit the
+three tracked files if you want it current again; there's no CI job
+enforcing freshness.
+
+`graph.json` also carries one manually-added fact the extractor didn't
+find on its own: `references` edges (marked `"_origin": "manual"`,
+INFERRED, confidence_score 0.95) from the four CI step nodes
+(`github_workflows_ci_ruff_lint_step`, `..._ruff_format_step`,
+`..._mypy_step`, `..._pytest_coverage_step`) to three new nodes
+(`pyproject_ruff_config`, `pyproject_mypy_config`,
+`pyproject_coverage_config`) representing the `pyproject.toml` config
+sections those CI steps actually enforce — closing a gap the graph itself
+surfaced (the steps only linked to the parent "CI Pipeline" node, not to
+what they configure). **A full `/graphify` rebuild will overwrite
+`graph.json` and silently drop this manual edge** (it isn't part of the
+deterministic AST pass or reproducible from the semantic-extraction prompt
+as currently written); re-add it by hand afterward, or extend the
+extraction-spec prompt to look for CI-step-to-config-section links
+generally, if this class of gap matters enough to keep fixing per-run.
 
 ## Known limitations
 

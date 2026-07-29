@@ -109,6 +109,10 @@ For [OpenClaw](https://docs.openclaw.ai) users, this repo ships a skill at [`ski
 
 OpenClaw will then discover and enable the skill on its next run. This is a separate integration path from the MCP server above — the skill is for an OpenClaw agent shelling out to the `pyfit` CLI directly; `pyfit-mcp` is for any MCP-capable client (including OpenClaw, if it supports MCP servers) making structured tool calls instead.
 
+## Knowledge graph
+
+This repo also carries a [graphify](https://github.com/safishamsi/graphify)-generated knowledge graph of its own codebase and docs, tracked at `graphify-out/graph.html` (interactive, open in any browser — no server needed), `graphify-out/GRAPH_REPORT.md` (audit report: god nodes, cross-community bridges, surprising cross-doc connections), and `graphify-out/graph.json` (raw graph data). It's a snapshot, not auto-regenerated — re-run `/graphify` (see [AGENTS.md](AGENTS.md)) if the codebase has since changed significantly and you want it current again.
+
 ## How it works
 
 A closed 2D shape's set of legal (non-overlapping) placements relative to another fixed shape is described by their **no-fit-polygon (NFP)**: the region a moving shape's reference point must stay outside of to avoid overlapping the stationary one. `pyfit` computes NFPs via [`pyclipper`](https://github.com/fonttools/pyclipper) (Python bindings to the mature Clipper library) using the standard Minkowski-sum technique, verified against a hand-computable case (the NFP of two unit squares is exactly the 2×2 square from (-1,-1) to (1,1)) before anything was built on top of it.
@@ -145,6 +149,7 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 | `tests/` | pytest suite: unit tests per module, plus subprocess-level CLI integration tests. |
 | `skills/pyfit/SKILL.md` | OpenClaw skill teaching an agent when/how to invoke the `pyfit` CLI. See "OpenClaw skill" above. |
 | `openclaw.config.snippet.jsonc` | A snippet to merge into `~/.openclaw/openclaw.json` to register the above skill. |
+| `graphify-out/` | Tracked: `graph.html`/`GRAPH_REPORT.md`/`graph.json`, a knowledge-graph snapshot of this repo. See "Knowledge graph" above. Everything else in this directory (extraction cache, cost log, community labels) is gitignored local/derived state. |
 
 ## License
 
