@@ -114,6 +114,15 @@ by date instead.
   - `blog-posts/introducing-pyfit.md`: fixed its heading structure (every
     section was a flat `#`/H1; now a proper `#`/`##` hierarchy). Narrative
     content unchanged.
+- [OpenClaw](https://docs.openclaw.ai) skill support: `skills/pyfit/SKILL.md`
+  (frontmatter `name`/`description`/`metadata.openclaw.requires.bins:
+  ["pyfit"]`, plus a markdown body covering the job-spec format and CLI
+  flags) teaches an OpenClaw agent to invoke the `pyfit` CLI directly, no
+  MCP setup required — a separate, additive path alongside the existing
+  `pyfit-mcp` server. `openclaw.config.snippet.jsonc` is a fragment to
+  merge into `~/.openclaw/openclaw.json` (`skills.load.extraDirs` plus a
+  `skills.entries.pyfit` enable) so OpenClaw actually discovers it.
+  README/AGENTS.md updated to document both files.
 
 ## 2026-07-14
 

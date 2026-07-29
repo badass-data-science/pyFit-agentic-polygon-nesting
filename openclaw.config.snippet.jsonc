@@ -1,0 +1,25 @@
+// Snippet for ~/.openclaw/openclaw.json to make OpenClaw aware of this
+// project's "pyfit" skill (skills/pyfit/SKILL.md).
+//
+// Merge the "skills" key below into your existing openclaw.json (don't
+// overwrite your whole file with this one -- it's a fragment, not a
+// complete config). Replace the extraDirs path with wherever you actually
+// cloned this repo.
+//
+// pyfit itself still needs to be installed separately and be on PATH:
+//   pip install pyfit-agentic-polygon-nesting
+// (the SKILL.md's "requires.bins" gate checks for exactly this.)
+{
+  "skills": {
+    "load": {
+      // Point this at <path-to-this-repo>/skills, or its parent, so
+      // OpenClaw's skill discovery finds skills/pyfit/SKILL.md.
+      "extraDirs": ["/absolute/path/to/pyFit-agentic-polygon-nesting/skills"]
+    },
+    "entries": {
+      "pyfit": {
+        "enabled": true
+      }
+    }
+  }
+}
