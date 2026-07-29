@@ -26,6 +26,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
   "Topic :: Multimedia :: Graphics :: 3D Modeling",
+  "Typing :: Typed",
 ]
 dependencies = [
   "shapely",

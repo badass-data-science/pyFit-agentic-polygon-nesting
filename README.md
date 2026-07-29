@@ -1,6 +1,9 @@
 # pyFit - Agentic Irregular 2D Polygon Nesting (Bin-Packing) Tool
 
 [![CI](https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/actions/workflows/ci.yml/badge.svg)](https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg)](pyproject.toml)
+[![Development Status: Beta](https://img.shields.io/badge/status-beta-orange.svg)](CHANGELOG.md)
 
 <img src="blog-posts/images/nest_sheet1_pylair_triangles.png" alt="nesting-example" width="416" height="312">
 
