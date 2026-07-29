@@ -1,5 +1,7 @@
 # pyFit - Agentic Irregular 2D Polygon Nesting (Bin-Packing) Tool
 
+[![CI](https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/actions/workflows/ci.yml/badge.svg)](https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/actions/workflows/ci.yml)
+
 <img src="blog-posts/images/nest_sheet1_pylair_triangles.png" alt="nesting-example" width="416" height="312">
 
 A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D shapes and how many of each you need, arranges them onto rectangular sheet stock (plywood, acrylic, sheet metal, ...) with minimal wasted material, and writes out a ready-to-cut **DXF file per sheet** (plus a JSON placement report) for your laser cutter or CNC router.
@@ -17,6 +19,14 @@ For running the test suite:
 ```
 pip install -e ".[test]"
 pytest
+```
+
+For linting and type checking (what CI runs):
+
+```
+pip install -e ".[lint]"
+ruff check pyfit tests
+mypy
 ```
 
 ## Usage

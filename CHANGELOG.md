@@ -46,6 +46,12 @@ by date instead.
   client requests them, running the actual packing in a worker thread
   (`asyncio.to_thread`) so the server's event loop stays free to send them
   mid-call.
+- CI (`.github/workflows/ci.yml`, GitHub Actions): runs `ruff check`, `mypy`,
+  and `pytest` on Python 3.9 and 3.12 for every push/PR to `main`. Added a
+  `lint` optional-dependency group (`ruff`, `mypy`, `types-shapely`) and
+  `[tool.ruff]`/`[tool.mypy]` config to `pyproject.toml`; modernized
+  `typing.List`/`Tuple`/`Optional` usage to PEP 585/604 builtin generics
+  throughout to satisfy the new lint/type checks.
 
 ## 2026-07-14
 
