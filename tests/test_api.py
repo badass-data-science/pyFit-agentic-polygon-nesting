@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pyfit.api import load_part, run_nest, nest_result_report, write_nest_files
-
+from pyfit.api import load_part, nest_result_report, run_nest, write_nest_files
 
 UNIT_SQUARE = [[0, 0], [1, 0], [1, 1], [0, 1]]
 
@@ -65,7 +64,7 @@ def test_nest_result_report_structure():
         "sheet": {"width": 3, "height": 2},
         "parts": [{"name": "sq", "polygon": UNIT_SQUARE, "quantity": 2, "allow_mirror": False}],
     }
-    sheet, result = run_nest(job, rotation_step_degrees=90.0)
+    _sheet, result = run_nest(job, rotation_step_degrees=90.0)
     report = nest_result_report(result)
 
     assert report["sheets_used"] == 1

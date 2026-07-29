@@ -22,9 +22,11 @@
 import io
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon as MplPolygon, Rectangle
+from matplotlib.patches import Polygon as MplPolygon
+from matplotlib.patches import Rectangle
 
 
 def render_sheet_preview_png_bytes(sheet, placements_on_sheet, sheet_number=None, utilization=None):
@@ -46,9 +48,9 @@ def render_sheet_preview_png_bytes(sheet, placements_on_sheet, sheet_number=None
 
   title = 'pyfit preview'
   if sheet_number is not None:
-    title += ' -- sheet %d' % sheet_number
+    title += f' -- sheet {sheet_number}'
   if utilization is not None:
-    title += ' (%.1f%% utilized)' % (utilization * 100.)
+    title += f' ({utilization * 100.:.1f}% utilized)'
   ax.set_title(title)
 
   buf = io.BytesIO()

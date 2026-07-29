@@ -19,12 +19,22 @@
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
 
+from __future__ import annotations
+
 from itertools import combinations
-from typing import Callable, List, Optional, Tuple
+from typing import Callable
 
-from shapely.geometry import Polygon as ShapelyPolygon, LinearRing, box
+from shapely.geometry import LinearRing, box
+from shapely.geometry import Polygon as ShapelyPolygon
 
-from .geometry import NestResult, Part, Placement, Sheet, polygon_area, transform_polygon
+from .geometry import (
+  NestResult,
+  Part,
+  Placement,
+  Sheet,
+  polygon_area,
+  transform_polygon,
+)
 from .nfp import no_fit_polygon
 from .sheet import inner_fit_bounds, sheet_utilization
 
@@ -32,7 +42,7 @@ OVERLAP_AREA_TOLERANCE = 1e-9
 BOUNDS_TOLERANCE = 1e-9
 
 
-def _extract_points(geom) -> List[Tuple[float, float]]:
+def _extract_points(geom) -> list[tuple[float, float]]:
   # Flattens any shapely intersection result (Point, MultiPoint,
   # LineString -- from collinear/overlapping edges, MultiLineString, or a
   # GeometryCollection mixing those) down to a flat list of coordinate
@@ -60,7 +70,7 @@ def _candidate_orientations(part: Part, rotation_step_degrees: float):
     angle += rotation_step_degrees
 
 
-def _overlaps_any(polygon: List, placed_polygons: List[List]) -> bool:
+def _overlaps_any(polygon: list, placed_polygons: list[list]) -> bool:
   shp = ShapelyPolygon(polygon)
   for placed in placed_polygons:
     if shp.intersection(ShapelyPolygon(placed)).area > OVERLAP_AREA_TOLERANCE:
@@ -68,8 +78,8 @@ def _overlaps_any(polygon: List, placed_polygons: List[List]) -> bool:
   return False
 
 
-def _valid_candidate_points(bounds: Tuple[float, float, float, float], oriented_polygon: List,
-                             placed_polygons: List[List]) -> List[Tuple[float, float]]:
+def _valid_candidate_points(bounds: tuple[float, float, float, float], oriented_polygon: list,
+                             placed_polygons: list[list]) -> list[tuple[float, float]]:
   # Bottom-left-fill candidate positions: the sheet's own 4 corners, every
   # vertex of the NFP of oriented_polygon against each already-placed
   # part, every point where an NFP boundary crosses the sheet's own
@@ -112,8 +122,8 @@ def _valid_candidate_points(bounds: Tuple[float, float, float, float], oriented_
   return valid
 
 
-def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
-         on_progress: Optional[Callable[[int, int, int], None]] = None) -> NestResult:
+def pack(parts: list[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
+         on_progress: Callable[[int, int, int], None] | None = None) -> NestResult:
   # Bottom-left-fill with NFP-based collision avoidance: a heuristic, not
   # a globally optimal solver (irregular 2D bin-packing is NP-hard) --
   # see nfp.py and this package's README for the algorithm and its known
@@ -128,14 +138,14 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
   # instance count alone can go quiet for a long stretch if one instance
   # is expensive to place, which is the scenario a caller displaying
   # "still working" progress most needs to hear about.
-  instances: List[Part] = []
+  instances: list[Part] = []
   for part in parts:
     instances.extend([part] * part.quantity)
   instances.sort(key=lambda p: polygon_area(p.polygon), reverse=True)
   total_instances = len(instances)
 
-  placements: List[Placement] = []
-  sheets_polygons: List[List[List]] = [[]]
+  placements: list[Placement] = []
+  sheets_polygons: list[list[list]] = [[]]
   sheet_area = sheet.width * sheet.height
   # running (area already placed) per sheet, checked before doing any
   # NFP work -- reusing scrap means every part instance can end up
@@ -145,7 +155,7 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
   # its own area doesn't, so this is a cheap, exact (never wrongly
   # skips a sheet that could actually fit) filter that turns an
   # already-full sheet into an O(1) skip instead of a full NFP sweep.
-  sheets_placed_area: List[float] = [0.0]
+  sheets_placed_area: list[float] = [0.0]
 
   for part in instances:
     placed_this_part = False
@@ -184,8 +194,7 @@ def pack(parts: List[Part], sheet: Sheet, rotation_step_degrees: float = 15.0,
         placed_this_part = True
       elif len(sheets_polygons[sheet_index]) == 0:
         raise ValueError(
-          "Part %r does not fit on an empty %sx%s sheet in any orientation."
-          % (part.name, sheet.width, sheet.height)
+          f"Part {part.name!r} does not fit on an empty {sheet.width}x{sheet.height} sheet in any orientation."
         )
       else:
         # this sheet is full for this part, but earlier/later sheets may

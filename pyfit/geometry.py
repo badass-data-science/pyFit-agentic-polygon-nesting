@@ -20,13 +20,11 @@
 #    THE SOFTWARE.
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 import numpy as np
 from shapely.geometry import Polygon
 
-
-Point = Tuple[float, float]
+Point = tuple[float, float]
 
 
 @dataclass
@@ -38,7 +36,7 @@ class Part:
   # point they want rotation to pivot around (e.g. one corner, or the
   # centroid).
   name: str
-  polygon: List[Point]
+  polygon: list[Point]
   quantity: int
   allow_mirror: bool = True
 
@@ -56,7 +54,7 @@ class Placement:
   position: Point           # translation applied after rotation/mirroring
   rotation_degrees: float
   mirrored: bool
-  polygon: List[Point]       # final polygon in sheet coordinates, for
+  polygon: list[Point]       # final polygon in sheet coordinates, for
                               # convenience (export/verification don't have
                               # to re-derive it from the transform fields)
 
@@ -64,25 +62,25 @@ class Placement:
 @dataclass
 class NestResult:
   sheets_used: int
-  placements: List[Placement] = field(default_factory=list)
-  utilization_by_sheet: List[float] = field(default_factory=list)
+  placements: list[Placement] = field(default_factory=list)
+  utilization_by_sheet: list[float] = field(default_factory=list)
 
 
-def polygon_area(polygon: List[Point]) -> float:
+def polygon_area(polygon: list[Point]) -> float:
   return Polygon(polygon).area
 
 
-def bounding_box(polygon: List[Point]) -> Tuple[float, float, float, float]:
+def bounding_box(polygon: list[Point]) -> tuple[float, float, float, float]:
   xs = [p[0] for p in polygon]
   ys = [p[1] for p in polygon]
   return (min(xs), min(ys), max(xs), max(ys))
 
 
-def translate_polygon(polygon: List[Point], dx: float, dy: float) -> List[Point]:
+def translate_polygon(polygon: list[Point], dx: float, dy: float) -> list[Point]:
   return [(x + dx, y + dy) for x, y in polygon]
 
 
-def rotate_polygon(polygon: List[Point], degrees: float) -> List[Point]:
+def rotate_polygon(polygon: list[Point], degrees: float) -> list[Point]:
   # rotated about the local origin (0, 0), not the polygon's own centroid
   # -- see Part's docstring
   theta = np.radians(degrees)
@@ -90,14 +88,14 @@ def rotate_polygon(polygon: List[Point], degrees: float) -> List[Point]:
   return [(x * cos_t - y * sin_t, x * sin_t + y * cos_t) for x, y in polygon]
 
 
-def mirror_polygon(polygon: List[Point]) -> List[Point]:
+def mirror_polygon(polygon: list[Point]) -> list[Point]:
   # reflect across the local Y axis (x -> -x); combined with
   # rotate_polygon, this reaches every orientation of both the shape and
   # its mirror image
   return [(-x, y) for x, y in polygon]
 
 
-def orient_ccw(polygon: List[Point]) -> List[Point]:
+def orient_ccw(polygon: list[Point]) -> list[Point]:
   # the shoelace signed area is positive for a counter-clockwise polygon;
   # NFP computation (see nfp.py) assumes consistently-wound input, so
   # every polygon this module hands off gets normalized here rather than
@@ -110,8 +108,8 @@ def orient_ccw(polygon: List[Point]) -> List[Point]:
   return polygon if signed_area > 0 else list(reversed(polygon))
 
 
-def transform_polygon(polygon: List[Point], rotation_degrees: float, mirrored: bool,
-                       dx: float, dy: float) -> List[Point]:
+def transform_polygon(polygon: list[Point], rotation_degrees: float, mirrored: bool,
+                       dx: float, dy: float) -> list[Point]:
   # canonical order: mirror, then rotate, then translate -- matches how
   # Placement's fields are interpreted everywhere else in this package
   poly = mirror_polygon(polygon) if mirrored else polygon

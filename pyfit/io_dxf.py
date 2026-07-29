@@ -19,7 +19,6 @@
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
 
-from typing import List
 
 from .geometry import Placement, Point, Sheet
 
@@ -31,7 +30,7 @@ from .geometry import Placement, Point, Sheet
 _MATCH_DECIMALS = 6
 
 
-def _read_line_entities(path: str) -> List[tuple]:
+def _read_line_entities(path: str) -> list[tuple]:
   # Minimal raw DXF reader: walks the group-code stream looking for LINE
   # entities and their start (10/20)/end (11/21) coordinates, ignoring Z
   # (this package is 2D-only) and everything else (layers, colors,
@@ -43,7 +42,7 @@ def _read_line_entities(path: str) -> List[tuple]:
   entities = []
   i = 0
   in_line_entity = False
-  values = {}
+  values: dict[str, str] = {}
   while i < len(lines) - 1:
     code, value = lines[i].strip(), lines[i + 1].strip()
     if code == "0":
@@ -70,15 +69,15 @@ def _key(point: Point) -> Point:
   return (round(point[0], _MATCH_DECIMALS), round(point[1], _MATCH_DECIMALS))
 
 
-def _reconstruct_loops(segments: List[tuple]) -> List[List[Point]]:
+def _reconstruct_loops(segments: list[tuple]) -> list[list[Point]]:
   # Groups line segments into connected components, then walks each
   # component as a simple cycle to recover an ordered polygon loop.
   # Every vertex in a valid closed shape must have exactly 2 segment
   # endpoints touching it; anything else means the input isn't a set of
   # simple closed loops, which is treated as a hard error rather than
   # guessed at.
-  adjacency = {}
-  original_points = {}
+  adjacency: dict[Point, list[Point]] = {}
+  original_points: dict[Point, Point] = {}
   for p0, p1 in segments:
     k0, k1 = _key(p0), _key(p1)
     original_points.setdefault(k0, p0)
@@ -89,8 +88,8 @@ def _reconstruct_loops(segments: List[tuple]) -> List[List[Point]]:
   for k, neighbors in adjacency.items():
     if len(neighbors) != 2:
       raise ValueError(
-        "DXF import expects simple closed loops, but vertex %r has %d connected "
-        "segment endpoints (expected exactly 2)." % (original_points[k], len(neighbors))
+        f"DXF import expects simple closed loops, but vertex {original_points[k]!r} has "
+        f"{len(neighbors)} connected segment endpoints (expected exactly 2)."
       )
 
   visited = set()
@@ -116,12 +115,12 @@ def _reconstruct_loops(segments: List[tuple]) -> List[List[Point]]:
   return loops
 
 
-def import_polygons_from_dxf(path: str) -> List[List[Point]]:
+def import_polygons_from_dxf(path: str) -> list[list[Point]]:
   segments = _read_line_entities(path)
   return _reconstruct_loops(segments)
 
 
-def write_sheet_dxf(placements_on_sheet: List[Placement], sheet: Sheet, path: str) -> None:
+def write_sheet_dxf(placements_on_sheet: list[Placement], sheet: Sheet, path: str) -> None:
   with open(path, "w") as outfile:
     outfile.write("0\nSECTION\n2\nENTITIES\n")
 
@@ -142,5 +141,5 @@ def write_sheet_dxf(placements_on_sheet: List[Placement], sheet: Sheet, path: st
 
 def _write_line(outfile, p0: Point, p1: Point) -> None:
   outfile.write("0\nLINE\n8\n1\n")
-  outfile.write("10\n%s\n20\n%s\n30\n0.0\n" % (p0[0], p0[1]))
-  outfile.write("11\n%s\n21\n%s\n31\n0.0\n" % (p1[0], p1[1]))
+  outfile.write(f"10\n{p0[0]}\n20\n{p0[1]}\n30\n0.0\n")
+  outfile.write(f"11\n{p1[0]}\n21\n{p1[1]}\n31\n0.0\n")
