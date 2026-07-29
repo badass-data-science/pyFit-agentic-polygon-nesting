@@ -137,8 +137,12 @@ def test_on_progress_fires_at_least_once_per_placed_instance():
     sheet = Sheet(width=3, height=2)
     calls = []
 
-    result = pack(parts, sheet, rotation_step_degrees=90,
-                   on_progress=lambda placed, total, sheet_index: calls.append((placed, total, sheet_index)))
+    result = pack(
+        parts,
+        sheet,
+        rotation_step_degrees=90,
+        on_progress=lambda placed, total, sheet_index: calls.append((placed, total, sheet_index)),
+    )
 
     assert result.sheets_used == 1
     assert len(calls) >= 6  # at least once per instance; more if a sheet retry happens
@@ -166,8 +170,12 @@ def test_on_progress_reports_a_higher_sheet_index_when_earlier_sheets_are_full()
     ]
     sheet_indices_seen = []
 
-    pack(parts, sheet, rotation_step_degrees=90,
-         on_progress=lambda placed, total, sheet_index: sheet_indices_seen.append(sheet_index))
+    pack(
+        parts,
+        sheet,
+        rotation_step_degrees=90,
+        on_progress=lambda placed, total, sheet_index: sheet_indices_seen.append(sheet_index),
+    )
 
     assert 0 in sheet_indices_seen
     assert max(sheet_indices_seen) >= 1

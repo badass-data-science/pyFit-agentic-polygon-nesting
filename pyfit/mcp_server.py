@@ -35,6 +35,7 @@ import asyncio
 from mcp.server.fastmcp import Context, FastMCP, Image
 
 from .api import nest_result_report, run_nest, write_nest_files
+from .geometry import NestResult, Sheet
 from .preview import render_sheet_preview_png_bytes
 
 mcp = FastMCP("pyfit")
@@ -64,93 +65,131 @@ mcp = FastMCP("pyfit")
 
 
 def _job(sheet_width: float, sheet_height: float, parts: list[dict]) -> dict:
-  return {"sheet": {"width": sheet_width, "height": sheet_height}, "parts": parts}
+    return {"sheet": {"width": sheet_width, "height": sheet_height}, "parts": parts}
 
 
-async def _run_nest(job: dict, rotation_step_degrees: float, ctx: Context | None):
-  loop = asyncio.get_running_loop()
+async def _run_nest(
+    job: dict, rotation_step_degrees: float, ctx: Context | None
+) -> tuple[Sheet, NestResult]:
+    loop = asyncio.get_running_loop()
 
-  def on_progress(placed, total, sheet_index):
-    if ctx is None:
-      return
-    message = f'placed {placed}/{total} parts (checking sheet {sheet_index + 1})'
-    asyncio.run_coroutine_threadsafe(ctx.report_progress(placed, total, message), loop)
+    def on_progress(placed: int, total: int, sheet_index: int) -> None:
+        if ctx is None:
+            return
+        message = f"placed {placed}/{total} parts (checking sheet {sheet_index + 1})"
+        asyncio.run_coroutine_threadsafe(ctx.report_progress(placed, total, message), loop)
 
-  return await asyncio.to_thread(
-      run_nest, job, rotation_step_degrees=rotation_step_degrees,
-      on_progress=on_progress if ctx is not None else None)
-
-
-@mcp.tool()
-async def design_nest(sheet_width: float, sheet_height: float, parts: list[dict],
-                       rotation_step_degrees: float = 15.0, ctx: Context | None = None) -> dict:
-  """Pack a set of parts onto sheet stock (no files written) and return
-  a summary -- sheets used and per-sheet utilization -- so an agent can
-  cheaply try job specs (part counts, sheet size, rotation step) before
-  asking for a full placement report or file export. Reports MCP
-  progress (a placement heartbeat) on a large job if the caller
-  requested it."""
-  _sheet, result = await _run_nest(_job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx)
-  return {
-      'sheets_used': result.sheets_used,
-      'utilization_by_sheet': result.utilization_by_sheet,
-  }
+    return await asyncio.to_thread(
+        run_nest,
+        job,
+        rotation_step_degrees=rotation_step_degrees,
+        on_progress=on_progress if ctx is not None else None,
+    )
 
 
 @mcp.tool()
-async def preview_nest(sheet_width: float, sheet_height: float, parts: list[dict],
-                        rotation_step_degrees: float = 15.0, ctx: Context | None = None) -> list:
-  """Render a quick 2D preview of every sheet's layout (boundary plus
-  every placed part's outline, labeled with utilization) and return them
-  inline as images, so a nesting result can be seen in-conversation
-  before committing to any file export. Reports MCP progress (a
-  placement heartbeat) on a large job if the caller requested it."""
-  sheet, result = await _run_nest(_job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx)
-  content: list = []
-  for sheet_index in range(result.sheets_used):
-    placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
-    png_bytes = render_sheet_preview_png_bytes(
-        sheet, placements_on_sheet, sheet_number=sheet_index + 1,
-        utilization=result.utilization_by_sheet[sheet_index])
-    content.append(
-        f'sheet {sheet_index + 1}: {len(placements_on_sheet)} parts, '
-        f'{result.utilization_by_sheet[sheet_index] * 100.:.1f}% utilized')
-    content.append(Image(data=png_bytes, format="png"))
-  return content
+async def design_nest(
+    sheet_width: float,
+    sheet_height: float,
+    parts: list[dict],
+    rotation_step_degrees: float = 15.0,
+    ctx: Context | None = None,
+) -> dict:
+    """Pack a set of parts onto sheet stock (no files written) and return
+    a summary -- sheets used and per-sheet utilization -- so an agent can
+    cheaply try job specs (part counts, sheet size, rotation step) before
+    asking for a full placement report or file export. Reports MCP
+    progress (a placement heartbeat) on a large job if the caller
+    requested it."""
+    _sheet, result = await _run_nest(
+        _job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx
+    )
+    return {
+        "sheets_used": result.sheets_used,
+        "utilization_by_sheet": result.utilization_by_sheet,
+    }
 
 
 @mcp.tool()
-async def get_nest_report(sheet_width: float, sheet_height: float, parts: list[dict],
-                           rotation_step_degrees: float = 15.0, ctx: Context | None = None) -> dict:
-  """Pack a set of parts onto sheet stock and return the full placement
-  report as structured data (sheets used, per-sheet utilization, and
-  every part instance's sheet index, position, rotation, and mirror
-  flag) without writing any files. Reports MCP progress (a placement
-  heartbeat) on a large job if the caller requested it."""
-  _sheet, result = await _run_nest(_job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx)
-  return nest_result_report(result)
+async def preview_nest(
+    sheet_width: float,
+    sheet_height: float,
+    parts: list[dict],
+    rotation_step_degrees: float = 15.0,
+    ctx: Context | None = None,
+) -> list:
+    """Render a quick 2D preview of every sheet's layout (boundary plus
+    every placed part's outline, labeled with utilization) and return them
+    inline as images, so a nesting result can be seen in-conversation
+    before committing to any file export. Reports MCP progress (a
+    placement heartbeat) on a large job if the caller requested it."""
+    sheet, result = await _run_nest(
+        _job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx
+    )
+    content: list = []
+    for sheet_index in range(result.sheets_used):
+        placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
+        png_bytes = render_sheet_preview_png_bytes(
+            sheet,
+            placements_on_sheet,
+            sheet_number=sheet_index + 1,
+            utilization=result.utilization_by_sheet[sheet_index],
+        )
+        content.append(
+            f"sheet {sheet_index + 1}: {len(placements_on_sheet)} parts, "
+            f"{result.utilization_by_sheet[sheet_index] * 100.0:.1f}% utilized"
+        )
+        content.append(Image(data=png_bytes, format="png"))
+    return content
 
 
 @mcp.tool()
-async def export_nest(output_path: str, sheet_width: float, sheet_height: float,
-                       parts: list[dict], rotation_step_degrees: float = 15.0,
-                       preview: bool = False, ctx: Context | None = None) -> dict:
-  """Pack a set of parts and write output files to disk (mirrors the
-  `pyfit` CLI): one DXF per sheet actually used, written to
-  "<output_path>_sheet<N>.dxf". preview=True also writes
-  "<output_path>_sheet<N>.png". Returns the list of files written
-  alongside the full placement report. Reports MCP progress (a
-  placement heartbeat) on a large job if the caller requested it."""
-  sheet, result = await _run_nest(_job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx)
-  files_written = write_nest_files(sheet, result, output_path, preview=preview)
-  report = nest_result_report(result)
-  report['files_written'] = files_written
-  return report
+async def get_nest_report(
+    sheet_width: float,
+    sheet_height: float,
+    parts: list[dict],
+    rotation_step_degrees: float = 15.0,
+    ctx: Context | None = None,
+) -> dict:
+    """Pack a set of parts onto sheet stock and return the full placement
+    report as structured data (sheets used, per-sheet utilization, and
+    every part instance's sheet index, position, rotation, and mirror
+    flag) without writing any files. Reports MCP progress (a placement
+    heartbeat) on a large job if the caller requested it."""
+    _sheet, result = await _run_nest(
+        _job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx
+    )
+    return nest_result_report(result)
 
 
-def main():
-  mcp.run(transport="stdio")
+@mcp.tool()
+async def export_nest(
+    output_path: str,
+    sheet_width: float,
+    sheet_height: float,
+    parts: list[dict],
+    rotation_step_degrees: float = 15.0,
+    preview: bool = False,
+    ctx: Context | None = None,
+) -> dict:
+    """Pack a set of parts and write output files to disk (mirrors the
+    `pyfit` CLI): one DXF per sheet actually used, written to
+    "<output_path>_sheet<N>.dxf". preview=True also writes
+    "<output_path>_sheet<N>.png". Returns the list of files written
+    alongside the full placement report. Reports MCP progress (a
+    placement heartbeat) on a large job if the caller requested it."""
+    sheet, result = await _run_nest(
+        _job(sheet_width, sheet_height, parts), rotation_step_degrees, ctx
+    )
+    files_written = write_nest_files(sheet, result, output_path, preview=preview)
+    report = nest_result_report(result)
+    report["files_written"] = files_written
+    return report
+
+
+def main() -> None:
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
-  main()
+    main()

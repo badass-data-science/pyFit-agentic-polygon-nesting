@@ -32,12 +32,15 @@ class _FakeContext:
 
 
 def _parts(quantity, allow_mirror=False):
-    return [{"name": "sq", "polygon": UNIT_SQUARE, "quantity": quantity, "allow_mirror": allow_mirror}]
+    return [
+        {"name": "sq", "polygon": UNIT_SQUARE, "quantity": quantity, "allow_mirror": allow_mirror}
+    ]
 
 
 def test_design_nest_returns_summary_without_placements():
-    result = asyncio.run(design_nest(sheet_width=3, sheet_height=2, parts=_parts(6),
-                                      rotation_step_degrees=90.0))
+    result = asyncio.run(
+        design_nest(sheet_width=3, sheet_height=2, parts=_parts(6), rotation_step_degrees=90.0)
+    )
 
     assert result["sheets_used"] == 1
     assert result["utilization_by_sheet"][0] == 1.0
@@ -47,8 +50,9 @@ def test_design_nest_returns_summary_without_placements():
 def test_preview_nest_returns_one_text_and_image_pair_per_sheet():
     from mcp.server.fastmcp import Image
 
-    content = asyncio.run(preview_nest(sheet_width=2, sheet_height=2, parts=_parts(5),
-                                        rotation_step_degrees=90.0))
+    content = asyncio.run(
+        preview_nest(sheet_width=2, sheet_height=2, parts=_parts(5), rotation_step_degrees=90.0)
+    )
 
     # 5 unit squares on a 2x2 sheet -> 4 fit per sheet, forces a 2nd sheet
     assert len(content) == 4
@@ -59,8 +63,9 @@ def test_preview_nest_returns_one_text_and_image_pair_per_sheet():
 
 
 def test_get_nest_report_includes_full_placements_and_no_files():
-    report = asyncio.run(get_nest_report(sheet_width=3, sheet_height=2, parts=_parts(6),
-                                          rotation_step_degrees=90.0))
+    report = asyncio.run(
+        get_nest_report(sheet_width=3, sheet_height=2, parts=_parts(6), rotation_step_degrees=90.0)
+    )
 
     assert report["sheets_used"] == 1
     assert len(report["placements"]) == 6
@@ -70,8 +75,16 @@ def test_get_nest_report_includes_full_placements_and_no_files():
 def test_export_nest_writes_files_and_returns_report(tmp_path):
     out = tmp_path / "nest"
 
-    report = asyncio.run(export_nest(output_path=str(out), sheet_width=3, sheet_height=2,
-                                      parts=_parts(6), rotation_step_degrees=90.0, preview=True))
+    report = asyncio.run(
+        export_nest(
+            output_path=str(out),
+            sheet_width=3,
+            sheet_height=2,
+            parts=_parts(6),
+            rotation_step_degrees=90.0,
+            preview=True,
+        )
+    )
 
     assert report["sheets_used"] == 1
     assert len(report["placements"]) == 6
@@ -82,24 +95,33 @@ def test_export_nest_writes_files_and_returns_report(tmp_path):
 
 def test_bad_job_spec_raises_value_error():
     with pytest.raises(ValueError, match="quantity"):
-        asyncio.run(design_nest(sheet_width=3, sheet_height=2,
-                                 parts=[{"name": "sq", "polygon": UNIT_SQUARE}]))
+        asyncio.run(
+            design_nest(
+                sheet_width=3, sheet_height=2, parts=[{"name": "sq", "polygon": UNIT_SQUARE}]
+            )
+        )
 
 
 def test_no_context_means_no_progress_reporting():
     # ctx defaults to None (e.g. a direct call, like every other test in
     # this file) -- packing still runs (in a worker thread either way),
     # it just has nothing to report progress to.
-    result = asyncio.run(design_nest(sheet_width=3, sheet_height=2, parts=_parts(6),
-                                      rotation_step_degrees=90.0, ctx=None))
+    result = asyncio.run(
+        design_nest(
+            sheet_width=3, sheet_height=2, parts=_parts(6), rotation_step_degrees=90.0, ctx=None
+        )
+    )
     assert result["sheets_used"] == 1
 
 
 def test_context_receives_progress_heartbeats():
     ctx = _FakeContext()
 
-    result = asyncio.run(get_nest_report(sheet_width=3, sheet_height=2, parts=_parts(6),
-                                          rotation_step_degrees=90.0, ctx=ctx))
+    result = asyncio.run(
+        get_nest_report(
+            sheet_width=3, sheet_height=2, parts=_parts(6), rotation_step_degrees=90.0, ctx=ctx
+        )
+    )
 
     assert result["sheets_used"] == 1
     # exact count depends on asyncio scheduling of the cross-thread

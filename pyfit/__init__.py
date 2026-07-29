@@ -18,3 +18,34 @@
 #    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
+"""pyFit: a general-purpose 2D irregular-polygon nesting (bin-packing) tool.
+
+Arranges a set of 2D shapes onto rectangular sheet stock with minimal
+wasted material, via a no-fit-polygon bottom-left-fill heuristic. See
+`pyfit.api.run_nest` for the main programmatic entry point, or the `pyfit`
+console script for command-line use.
+"""
+
+from importlib.metadata import PackageNotFoundError, version
+
+from .api import load_part, nest_result_report, run_nest, write_nest_files
+from .geometry import NestResult, Part, Placement, Sheet
+from .packer import pack
+
+try:
+    __version__ = version("pyfit-agentic-polygon-nesting")
+except PackageNotFoundError:
+    # not installed (e.g. running from a checkout without `pip install -e .`)
+    __version__ = "0.0.0"
+
+__all__ = [
+    "NestResult",
+    "Part",
+    "Placement",
+    "Sheet",
+    "load_part",
+    "nest_result_report",
+    "pack",
+    "run_nest",
+    "write_nest_files",
+]

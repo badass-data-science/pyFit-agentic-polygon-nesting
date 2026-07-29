@@ -32,8 +32,11 @@ jobs:
       - name: Lint (ruff)
         run: ruff check pyfit tests
 
+      - name: Format check (ruff format)
+        run: ruff format --check pyfit tests
+
       - name: Type check (mypy)
         run: mypy
 
-      - name: Test (pytest)
-        run: pytest
+      - name: Test (pytest, with coverage)
+        run: pytest --cov=pyfit --cov-report=term-missing

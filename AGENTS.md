@@ -30,6 +30,12 @@ Optional extras: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, sinc
 `mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `pyfit/mcp_server.py`'s
 `FastMCP`/`Image` imports and `tests/test_mcp_server.py` both 404 on 2.0.0's new
 module layout), and `lint` (`ruff`, `mypy`, `types-shapely` — what CI runs).
+`test` also pulls in `pytest-cov`; run `pytest --cov=pyfit --cov-report=term-missing`
+for a coverage report (note `pyfit/cli.py` will show as ~0% covered even
+though `tests/test_cli.py` exercises it thoroughly — those tests invoke it as
+a subprocess, which `coverage.py` can't see into without extra
+`COVERAGE_PROCESS_START` plumbing this project doesn't bother with; it's a
+measurement gap, not an actual testing gap).
 
 ## Packaging / PyPI readiness
 
@@ -61,13 +67,25 @@ pytest
   sums, or manual overlap/containment checks) rather than trusting a single
   hand-computed case. See the "real gotcha" below for why.
 
+Every public function/class across `pyfit/` has a real docstring (not a `#`
+comment above the `def`) — this is deliberate, not a style nit: docstrings
+are what `help()`, IDEs, and Sphinx-style doc generation actually pick up,
+comments aren't. Private `_helpers` should have one too where the "why", not
+just the "what", isn't obvious from the name and signature alone. Keep new
+code consistent with this rather than reverting to comments.
+
 CI (`.github/workflows/ci.yml`) runs `ruff check` and `mypy` (config in
 `pyproject.toml`'s `[tool.ruff]`/`[tool.mypy]`, extras installed via the `lint`
-optional-dependency group) plus `pytest`, on Python 3.9 and 3.12. No formatter
-is configured/enforced — the codebase uses 2-space indentation (matching
-pyLair's own convention) rather than the 4-space/Black-style default `ruff
-format` would impose, so match the surrounding style in whichever file you're
-editing rather than running `ruff format`.
+optional-dependency group) plus `pytest --cov`, on Python 3.9 and 3.12.
+`mypy`'s `disallow_untyped_defs` is on — every function, including private
+`_helpers`, needs a full signature (all parameters plus the return type), not
+just the public API.
+
+The codebase is formatted with `ruff format` (standard 4-space/Black-style
+PEP8 — the whole `pyfit/` tree was reformatted from an earlier 2-space
+convention on 2026-07-28, see CHANGELOG). CI enforces this (`ruff format
+--check`), so run `ruff format pyfit tests` after editing rather than
+hand-matching the surrounding style.
 
 ## Layout
 
@@ -75,13 +93,14 @@ editing rather than running `ruff format`.
 |---|---|
 | `pyfit/geometry.py` | `Part`/`Sheet`/`Placement`/`NestResult` data model, plus polygon transforms (rotate/mirror/translate about a local origin) and area/bounding-box helpers. |
 | `pyfit/nfp.py` | No-fit-polygon computation via `pyclipper`, with a Minkowski-sum union fix (see below). |
-| `pyfit/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress(placed, total, sheet_index)` callback (see "Progress reporting" below). |
+| `pyfit/packer.py` | The bottom-left-fill placement heuristic, including trying every already-opened sheet in order before starting a new one, plus an optional `on_progress(placed, total, sheet_index)` callback (see "Progress reporting" below). `pack`'s docstring states its worst-case complexity explicitly (also summarized in README's "How it works") — update both if you change the candidate search's structure. |
 | `pyfit/sheet.py` | Sheet-boundary containment (`inner_fit_bounds`, exact bounding-box math, no NFP needed) and utilization reporting. |
 | `pyfit/io_dxf.py` | A minimal hand-written raw DXF reader/writer, no DXF library dependency. |
 | `pyfit/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout. |
 | `pyfit/api.py` | Shared entry point for the CLI and MCP server: `load_part`/`run_nest` (job-spec parsing + packing, `ValueError` on bad input) and `nest_result_report`/`write_nest_files` (structured report / file output). |
 | `pyfit/mcp_server.py` | MCP server (`pyfit-mcp`, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest`, all built on `api.py`. |
-| `pyfit/cli.py` | `getopt`-based command-line entry point, built on `api.py`. |
+| `pyfit/cli.py` | `argparse`-based command-line entry point, built on `api.py`. |
+| `pyfit/__init__.py` | `__version__` (from installed package metadata via `importlib.metadata`, not hardcoded — don't duplicate `pyproject.toml`'s version here) and re-exports of the small public surface (`Part`, `Sheet`, `Placement`, `NestResult`, `pack`, `run_nest`, `load_part`, `nest_result_report`, `write_nest_files`), so `import pyfit` is directly useful. |
 
 ## A real gotcha worth knowing about (`pyfit/nfp.py`)
 
@@ -110,7 +129,7 @@ placement can be slow. `api.py:run_nest` forwards it through unchanged.
   stderr every `PROGRESS_MIN_INTERVAL_SECONDS` (2s), leaving stdout as clean
   JSON. `-q/--quiet` disables it.
 - **MCP**: all four tools in `mcp_server.py` are `async def` and accept an
-  implicit `ctx: Optional[Context]` (excluded from the tool's public schema by
+  implicit `ctx: Context | None` (excluded from the tool's public schema by
   FastMCP). This is load-bearing, not incidental: a *synchronous* FastMCP tool
   blocks the server's event loop for its entire duration (confirmed by reading
   `FuncMetadata.call_fn_with_arg_validation` — a sync tool is called directly,

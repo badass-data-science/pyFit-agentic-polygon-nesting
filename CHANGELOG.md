@@ -65,6 +65,55 @@ by date instead.
   `pyfit/py.typed` marker (PEP 561) so downstream type checkers pick up this
   package's type hints. Verified with `python -m build` + `twine check
   dist/*`. Not yet published to PyPI.
+- README badges (CI, License, supported Python versions, dev status) and a
+  `Typing :: Typed` classifier.
+- A professionalization pass across code and docs, aimed at making the
+  project a stronger portfolio/skills-demonstration piece:
+  - Reformatted all of `pyfit/` from a 2-space to the standard 4-space PEP8
+    convention (via `ruff format`), matching `tests/`, which had already
+    used 4-space. CI now enforces this (`ruff format --check`).
+  - Converted every public function/class's documentation from `#` comments
+    to real triple-quoted docstrings (introspectable via `help()`/IDEs/doc
+    generators, unlike comments), across `geometry.py`, `nfp.py`,
+    `packer.py`, `sheet.py`, `io_dxf.py`, and `preview.py` (`api.py` and
+    `mcp_server.py` already used real docstrings).
+  - Added the previously-missing type hints to `pyfit/preview.py` (the only
+    untyped module) and to several private helpers elsewhere that had
+    partial signatures; turned on mypy's `disallow_untyped_defs` so this
+    can't silently regress. Renamed `save_sheet_preview`'s `the_filename`
+    parameter to `path`, matching every other module's naming.
+  - Rewrote `pyfit/cli.py` from hand-rolled `getopt` parsing (including a
+    ~35-line hand-written help string) to `argparse`: auto-generated
+    usage/help text, built-in `-R/--rotation-step` float parsing, and
+    `required=True` for `-j/--job`/`-o/--output` in place of manual
+    post-parse checks. Error/usage output now goes to stderr (previously
+    mixed into stdout), keeping stdout exclusively the JSON report on
+    success. `tests/test_cli.py` updated for the resulting output/exit-code
+    changes.
+  - Fleshed out `pyfit/__init__.py`: a module docstring, `__version__`
+    (read from installed package metadata via `importlib.metadata`, not
+    hardcoded — can't drift from `pyproject.toml`), and re-exports of the
+    small public surface (`Part`, `Sheet`, `Placement`, `NestResult`,
+    `pack`, `run_nest`, `load_part`, `nest_result_report`,
+    `write_nest_files`) so `import pyfit` is immediately useful.
+  - Added coverage measurement: `pytest-cov` in the `test` extra,
+    `[tool.coverage]` config in `pyproject.toml`, and a coverage report in
+    CI (`pytest --cov=pyfit --cov-report=term-missing`). No badge (would go
+    stale without a live source); `cli.py`'s subprocess-invoked tests are a
+    known, documented measurement gap (real coverage, invisible to
+    `coverage.py`).
+  - Documented `packer.pack`'s worst-case time complexity explicitly, in
+    its docstring and in README's "How it works" — ties directly to the
+    scrap-reuse performance tradeoff already described in "Known
+    limitations".
+  - `README.md`: links to the blog post, documents the coverage command,
+    and states the algorithm's complexity. `AGENTS.md`: corrects the
+    now-stale 2-space-indentation note, documents the docstring convention,
+    `disallow_untyped_defs`, `cli.py`'s new `argparse` basis, and
+    `__init__.py`'s re-exports.
+  - `blog-posts/introducing-pyfit.md`: fixed its heading structure (every
+    section was a flat `#`/H1; now a proper `#`/`##` hierarchy). Narrative
+    content unchanged.
 
 ## 2026-07-14
 

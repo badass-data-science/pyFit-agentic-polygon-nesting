@@ -48,8 +48,12 @@ def test_import_rejects_a_vertex_shared_by_more_than_two_segments(tmp_path):
     # of closed loops, so the importer must refuse to guess rather than
     # silently produce a wrong loop
     segments = [
-        ((0.0, 0.0), (1.0, 0.0)), ((1.0, 0.0), (0.0, 1.0)), ((0.0, 1.0), (0.0, 0.0)),
-        ((0.0, 0.0), (-1.0, 0.0)), ((-1.0, 0.0), (0.0, -1.0)), ((0.0, -1.0), (0.0, 0.0)),
+        ((0.0, 0.0), (1.0, 0.0)),
+        ((1.0, 0.0), (0.0, 1.0)),
+        ((0.0, 1.0), (0.0, 0.0)),
+        ((0.0, 0.0), (-1.0, 0.0)),
+        ((-1.0, 0.0), (0.0, -1.0)),
+        ((0.0, -1.0), (0.0, 0.0)),
     ]
     path = tmp_path / "shared_vertex.dxf"
     _write_raw_dxf(str(path), segments)
@@ -66,10 +70,22 @@ def test_write_sheet_dxf_round_trips_through_the_importer(tmp_path):
     # legitimately touch the sheet edge or each other
     sheet = Sheet(width=10, height=10)
     placements = [
-        Placement(part_name="a", sheet_index=0, position=(1, 1), rotation_degrees=0,
-                   mirrored=False, polygon=[(1, 1), (3, 1), (1, 2)]),
-        Placement(part_name="a", sheet_index=0, position=(6, 6), rotation_degrees=0,
-                   mirrored=False, polygon=[(6, 6), (8, 6), (6, 7)]),
+        Placement(
+            part_name="a",
+            sheet_index=0,
+            position=(1, 1),
+            rotation_degrees=0,
+            mirrored=False,
+            polygon=[(1, 1), (3, 1), (1, 2)],
+        ),
+        Placement(
+            part_name="a",
+            sheet_index=0,
+            position=(6, 6),
+            rotation_degrees=0,
+            mirrored=False,
+            polygon=[(6, 6), (8, 6), (6, 7)],
+        ),
     ]
     path = tmp_path / "sheet1.dxf"
 
@@ -78,10 +94,14 @@ def test_write_sheet_dxf_round_trips_through_the_importer(tmp_path):
 
     assert len(loops) == 3  # sheet boundary + 2 triangles
     areas = sorted(
-        abs(sum(
-            loop[i][0] * loop[(i + 1) % len(loop)][1] - loop[(i + 1) % len(loop)][0] * loop[i][1]
-            for i in range(len(loop))
-        )) / 2.0
+        abs(
+            sum(
+                loop[i][0] * loop[(i + 1) % len(loop)][1]
+                - loop[(i + 1) % len(loop)][0] * loop[i][1]
+                for i in range(len(loop))
+            )
+        )
+        / 2.0
         for loop in loops
     )
     # two triangles of area 1.0 each, plus the 10x10 sheet boundary

@@ -33,62 +33,70 @@ from .geometry import Point, orient_ccw
 # without risking integer overflow for sheets/parts sized in the tens of
 # thousands of units (pyclipper's internal range comfortably covers
 # coordinates up to roughly +-4.6e18 at this scale).
-SCALE = 10 ** 6
+SCALE = 10**6
 
 
-def _to_int(polygon: list[Point]):
-  return [(round(x * SCALE), round(y * SCALE)) for x, y in polygon]
+def _to_int(polygon: list[Point]) -> list[tuple[int, int]]:
+    """`polygon`'s coordinates scaled and rounded to pyclipper's integer space."""
+    return [(round(x * SCALE), round(y * SCALE)) for x, y in polygon]
 
 
-def _from_int(polygon) -> list[Point]:
-  return [(x / SCALE, y / SCALE) for x, y in polygon]
+def _from_int(polygon: list[tuple[int, int]]) -> list[Point]:
+    """The inverse of `_to_int`: pyclipper's integer coordinates back to floats."""
+    return [(x / SCALE, y / SCALE) for x, y in polygon]
 
 
 def no_fit_polygon(stationary: list[Point], moving: list[Point]) -> list[list[Point]]:
-  # The outer NFP of `moving` around a fixed `stationary`: the set of
-  # reference-point positions where `moving` (translated so its local
-  # origin lands on that position, with no rotation/mirroring applied --
-  # callers are responsible for rotating/mirroring `moving` themselves
-  # before calling this) touches or overlaps `stationary`. Computed as
-  # the Minkowski sum of `stationary` and the point-reflection of
-  # `moving` through its own local origin (NFP(A, B) = A (+) (-B)), the
-  # standard technique -- verified against the hand-computable case of
-  # two unit squares (reference corner at origin), which must give the
-  # exact 2x2 square from (-1,-1) to (1,1): a moving-part reference point
-  # strictly inside the returned polygon overlaps the stationary shape;
-  # on the boundary, the two touch; outside, they don't overlap at all.
-  #
-  # Usually a single polygon for the convex shapes this package is built
-  # around, but the return type is always a list since a genuinely
-  # non-convex NFP could in principle be disjoint.
-  #
-  # pyclipper's MinkowskiSum(pattern, path, True) sweeps `pattern` along
-  # each edge of the closed `path` and returns the *raw* swept contours
-  # rather than a single resolved polygon -- for a pattern that's small
-  # relative to the path, this includes an inner contour with opposite
-  # winding that looks like it's marking a hole, but isn't one: the true
-  # Minkowski sum of two convex filled shapes is always itself convex
-  # (hence simply connected, no holes possible -- verified against an
-  # independent ground truth, the convex hull of all pairwise
-  # vertex-sums, on a small-pattern/large-path case where the raw
-  # Clipper output was misleading). The fix is to treat every returned
-  # contour as an independent *solid* region and take their union (via
-  # shapely, ignoring winding direction) rather than trusting Clipper's
-  # winding-implied fill rule -- confirmed to recover the correct
-  # hole-free result on that same case.
-  #
-  # This union-of-solids treatment assumes the true result has no
-  # legitimate holes, which holds for the convex shapes this package
-  # targets (pyLair's triangular panels, and irregular-but-simple shapes
-  # generally) but would be wrong for a genuinely non-convex NFP with a
-  # real unreachable pocket -- out of scope for this package.
-  reflected_moving = [(-x, -y) for x, y in moving]
-  stationary_int = _to_int(orient_ccw(stationary))
-  reflected_int = _to_int(orient_ccw(reflected_moving))
+    """The outer no-fit-polygon (NFP) of `moving` around a fixed `stationary`.
 
-  raw_contours = pyclipper.MinkowskiSum(reflected_int, stationary_int, True)
-  solids = [Polygon(_from_int(poly)) for poly in raw_contours]
-  resolved = unary_union(solids)
+    The NFP is the set of reference-point positions where `moving`
+    (translated so its local origin lands on that position, with no
+    rotation/mirroring applied -- callers are responsible for
+    rotating/mirroring `moving` themselves before calling this) touches or
+    overlaps `stationary`. A moving-part reference point strictly inside the
+    returned polygon overlaps the stationary shape; on the boundary, the two
+    touch; outside, they don't overlap at all.
 
-  polygons = list(resolved.geoms) if isinstance(resolved, MultiPolygon) else [cast(Polygon, resolved)]
-  return [orient_ccw(cast(list[Point], list(poly.exterior.coords)[:-1])) for poly in polygons]
+    Computed as the Minkowski sum of `stationary` and the point-reflection of
+    `moving` through its own local origin (NFP(A, B) = A (+) (-B)), the
+    standard technique -- verified against the hand-computable case of two
+    unit squares (reference corner at origin), which must give the exact 2x2
+    square from (-1,-1) to (1,1).
+
+    Usually a single polygon for the convex shapes this package is built
+    around, but the return type is always a list since a genuinely
+    non-convex NFP could in principle be disjoint.
+
+    A real gotcha: `pyclipper.MinkowskiSum(pattern, path, True)` sweeps
+    `pattern` along each edge of the closed `path` and returns the *raw*
+    swept contours rather than a single resolved polygon -- for a pattern
+    that's small relative to the path, this includes an inner contour with
+    opposite winding that looks like it's marking a hole, but isn't one: the
+    true Minkowski sum of two convex filled shapes is always itself convex
+    (hence simply connected, no holes possible -- verified against an
+    independent ground truth, the convex hull of all pairwise vertex-sums,
+    on a small-pattern/large-path case where the raw Clipper output was
+    misleading). The fix is to treat every returned contour as an
+    independent *solid* region and take their union (via shapely, ignoring
+    winding direction) rather than trusting Clipper's own winding-implied
+    fill rule -- confirmed to recover the correct hole-free result on that
+    same case.
+
+    This union-of-solids treatment assumes the true result has no legitimate
+    holes, which holds for the convex shapes this package targets (pyLair's
+    triangular panels, and irregular-but-simple shapes generally) but would
+    be wrong for a genuinely non-convex NFP with a real unreachable pocket --
+    out of scope for this package.
+    """
+    reflected_moving = [(-x, -y) for x, y in moving]
+    stationary_int = _to_int(orient_ccw(stationary))
+    reflected_int = _to_int(orient_ccw(reflected_moving))
+
+    raw_contours = pyclipper.MinkowskiSum(reflected_int, stationary_int, True)
+    solids = [Polygon(_from_int(poly)) for poly in raw_contours]
+    resolved = unary_union(solids)
+
+    polygons = (
+        list(resolved.geoms) if isinstance(resolved, MultiPolygon) else [cast(Polygon, resolved)]
+    )
+    return [orient_ccw(cast(list[Point], list(poly.exterior.coords)[:-1])) for poly in polygons]
