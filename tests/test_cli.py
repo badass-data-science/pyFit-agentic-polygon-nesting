@@ -9,6 +9,7 @@ def run_cli(args, cwd=None):
         capture_output=True,
         text=True,
         cwd=cwd,
+        check=False,
     )
 
 
@@ -115,7 +116,7 @@ def test_preview_flag_writes_one_png_per_sheet(tmp_path):
     assert report["sheets_used"] == 2
 
     for n in (1, 2):
-        png_file = out.parent / ("nest_sheet%d.png" % n)
+        png_file = out.parent / f"nest_sheet{n}.png"
         assert png_file.exists()
         assert png_file.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
         assert str(png_file) in report["files_written"]

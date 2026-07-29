@@ -25,10 +25,10 @@ this project is standalone.
 pip install -e ".[test]"
 ```
 
-Optional extra: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, since
+Optional extras: `mcp` (`mcp<2.0` — pinned like pyLair's own `mcp` extra, since
 `mcp` 2.0.0 removed `mcp.server.fastmcp` entirely; `pyfit/mcp_server.py`'s
 `FastMCP`/`Image` imports and `tests/test_mcp_server.py` both 404 on 2.0.0's new
-module layout).
+module layout), and `lint` (`ruff`, `mypy`, `types-shapely` — what CI runs).
 
 ## Test
 
@@ -47,8 +47,13 @@ pytest
   sums, or manual overlap/containment checks) rather than trusting a single
   hand-computed case. See the "real gotcha" below for why.
 
-No linter/formatter is configured — match the surrounding style in whichever file
-you're editing.
+CI (`.github/workflows/ci.yml`) runs `ruff check` and `mypy` (config in
+`pyproject.toml`'s `[tool.ruff]`/`[tool.mypy]`, extras installed via the `lint`
+optional-dependency group) plus `pytest`, on Python 3.9 and 3.12. No formatter
+is configured/enforced — the codebase uses 2-space indentation (matching
+pyLair's own convention) rather than the 4-space/Black-style default `ruff
+format` would impose, so match the surrounding style in whichever file you're
+editing rather than running `ruff format`.
 
 ## Layout
 

@@ -10,8 +10,8 @@ def _write_raw_dxf(path, segments):
         f.write("0\nSECTION\n2\nENTITIES\n")
         for p0, p1 in segments:
             f.write("0\nLINE\n8\n1\n")
-            f.write("10\n%s\n20\n%s\n30\n0.0\n" % p0)
-            f.write("11\n%s\n21\n%s\n31\n0.0\n" % p1)
+            f.write("10\n{}\n20\n{}\n30\n0.0\n".format(*p0))
+            f.write("11\n{}\n21\n{}\n31\n0.0\n".format(*p1))
         f.write("0\nENDSEC\n0\nEOF\n")
 
 

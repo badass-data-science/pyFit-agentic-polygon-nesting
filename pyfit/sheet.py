@@ -19,12 +19,12 @@
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
 
-from typing import List, Optional, Tuple
+from __future__ import annotations
 
 from .geometry import Placement, Sheet, bounding_box, polygon_area
 
 
-def inner_fit_bounds(sheet: Sheet, oriented_polygon: List) -> Optional[Tuple[float, float, float, float]]:
+def inner_fit_bounds(sheet: Sheet, oriented_polygon: list) -> tuple[float, float, float, float] | None:
   # The valid range of translation (dx, dy) for which `oriented_polygon`
   # (already rotated/mirrored, not yet translated) stays entirely inside
   # the sheet's [0, width] x [0, height] rectangle. Because the sheet is
@@ -42,6 +42,6 @@ def inner_fit_bounds(sheet: Sheet, oriented_polygon: List) -> Optional[Tuple[flo
   return (dx_lo, dy_lo, dx_hi, dy_hi)
 
 
-def sheet_utilization(sheet: Sheet, placements_on_sheet: List[Placement]) -> float:
+def sheet_utilization(sheet: Sheet, placements_on_sheet: list[Placement]) -> float:
   placed_area = sum(polygon_area(p.polygon) for p in placements_on_sheet)
   return placed_area / (sheet.width * sheet.height)

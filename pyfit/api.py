@@ -27,9 +27,11 @@
 # FastMCP's tool dispatcher, which turns an uncaught ValueError into an
 # isError=True tool result -- can handle them however's appropriate.
 #
-from typing import Callable, List, Optional, Tuple
+from __future__ import annotations
 
-from .geometry import Part, Sheet, NestResult
+from typing import Callable
+
+from .geometry import NestResult, Part, Sheet
 from .io_dxf import import_polygons_from_dxf, write_sheet_dxf
 from .packer import pack
 from .preview import save_sheet_preview
@@ -45,19 +47,19 @@ def load_part(spec: dict) -> Part:
   if name is None:
     raise ValueError('Part spec is missing required field "name".')
   if "quantity" not in spec:
-    raise ValueError('Part %r is missing required field "quantity".' % name)
+    raise ValueError(f'Part {name!r} is missing required field "quantity".')
 
   if "dxf" in spec:
     loops = import_polygons_from_dxf(spec["dxf"])
     if len(loops) != 1:
       raise ValueError(
-          'Part %r: DXF file %r must contain exactly one closed loop, found %d.'
-          % (name, spec["dxf"], len(loops)))
+          f'Part {name!r}: DXF file {spec["dxf"]!r} must contain exactly one closed loop, '
+          f'found {len(loops)}.')
     polygon = loops[0]
   elif "polygon" in spec:
     polygon = [(float(x), float(y)) for x, y in spec["polygon"]]
   else:
-    raise ValueError('Part %r must specify either "dxf" or "polygon".' % name)
+    raise ValueError(f'Part {name!r} must specify either "dxf" or "polygon".')
 
   return Part(
       name=name,
@@ -68,7 +70,7 @@ def load_part(spec: dict) -> Part:
 
 
 def run_nest(job: dict, rotation_step_degrees: float = 15.0,
-             on_progress: Optional[Callable[[int, int, int], None]] = None) -> Tuple[Sheet, NestResult]:
+             on_progress: Callable[[int, int, int], None] | None = None) -> tuple[Sheet, NestResult]:
   """Parse a job spec dict ({"sheet": {"width", "height"}, "parts": [...]})
   and run the bottom-left-fill packer. Returns the parsed Sheet alongside
   the NestResult so callers that go on to write files (see
@@ -111,19 +113,19 @@ def nest_result_report(result: NestResult) -> dict:
 
 
 def write_nest_files(sheet: Sheet, result: NestResult, output_path: str,
-                      preview: bool = False) -> List[str]:
+                      preview: bool = False) -> list[str]:
   """Write one DXF (and, if preview=True, one PNG) per sheet actually
   used to "<output_path>_sheet<N>.<ext>". Returns the list of paths
   written, in the same order the CLI reports them."""
   files_written = []
   for sheet_index in range(result.sheets_used):
     placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
-    sheet_path = '%s_sheet%d.dxf' % (output_path, sheet_index + 1)
+    sheet_path = f'{output_path}_sheet{sheet_index + 1}.dxf'
     write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
     files_written.append(sheet_path)
 
     if preview:
-      preview_path = '%s_sheet%d.png' % (output_path, sheet_index + 1)
+      preview_path = f'{output_path}_sheet{sheet_index + 1}.png'
       save_sheet_preview(sheet, placements_on_sheet, preview_path,
                           sheet_number=sheet_index + 1,
                           utilization=result.utilization_by_sheet[sheet_index])

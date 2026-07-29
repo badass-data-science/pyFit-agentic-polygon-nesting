@@ -24,7 +24,7 @@ import json
 import sys
 import time
 
-from .api import run_nest, nest_result_report, write_nest_files
+from .api import nest_result_report, run_nest, write_nest_files
 
 # Minimum time between progress heartbeats printed to stderr -- packer.pack
 # can call on_progress far more often than this on a large or scrap-reuse-
@@ -41,7 +41,7 @@ def _make_progress_printer():
     if now - state['last_printed'] < PROGRESS_MIN_INTERVAL_SECONDS:
       return
     state['last_printed'] = now
-    print('pyfit: placed %d/%d parts (checking sheet %d)...' % (placed, total, sheet_index + 1),
+    print(f'pyfit: placed {placed}/{total} parts (checking sheet {sheet_index + 1})...',
           file=sys.stderr, flush=True)
 
   return _on_progress
@@ -99,7 +99,7 @@ def main():
     sys.exit(-1)
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'j:o:R:Pqh',
+    opts, _args = getopt.getopt(sys.argv[1:], 'j:o:R:Pqh',
                                 ['job=', 'output=', 'rotation-step=', 'preview', 'quiet', 'help'])
   except getopt.error as msg:
     print(str(msg) + ' (for help use --help)')
@@ -146,7 +146,7 @@ def main():
 
   report = nest_result_report(result)
   report['files_written'] = files_written
-  report_path = '%s_report.json' % output_path
+  report_path = f'{output_path}_report.json'
   with open(report_path, 'w') as f:
     json.dump(report, f, indent=2)
 

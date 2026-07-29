@@ -19,10 +19,11 @@
 #    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 #    THE SOFTWARE.
 
-from typing import List
+
+from typing import cast
 
 import pyclipper
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 from shapely.ops import unary_union
 
 from .geometry import Point, orient_ccw
@@ -35,15 +36,15 @@ from .geometry import Point, orient_ccw
 SCALE = 10 ** 6
 
 
-def _to_int(polygon: List[Point]):
-  return [(int(round(x * SCALE)), int(round(y * SCALE))) for x, y in polygon]
+def _to_int(polygon: list[Point]):
+  return [(round(x * SCALE), round(y * SCALE)) for x, y in polygon]
 
 
-def _from_int(polygon) -> List[Point]:
+def _from_int(polygon) -> list[Point]:
   return [(x / SCALE, y / SCALE) for x, y in polygon]
 
 
-def no_fit_polygon(stationary: List[Point], moving: List[Point]) -> List[List[Point]]:
+def no_fit_polygon(stationary: list[Point], moving: list[Point]) -> list[list[Point]]:
   # The outer NFP of `moving` around a fixed `stationary`: the set of
   # reference-point positions where `moving` (translated so its local
   # origin lands on that position, with no rotation/mirroring applied --
@@ -89,5 +90,5 @@ def no_fit_polygon(stationary: List[Point], moving: List[Point]) -> List[List[Po
   solids = [Polygon(_from_int(poly)) for poly in raw_contours]
   resolved = unary_union(solids)
 
-  polygons = resolved.geoms if resolved.geom_type == "MultiPolygon" else [resolved]
-  return [orient_ccw(list(poly.exterior.coords)[:-1]) for poly in polygons]
+  polygons = list(resolved.geoms) if isinstance(resolved, MultiPolygon) else [cast(Polygon, resolved)]
+  return [orient_ccw(cast(list[Point], list(poly.exterior.coords)[:-1])) for poly in polygons]
