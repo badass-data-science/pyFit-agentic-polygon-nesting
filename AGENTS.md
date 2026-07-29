@@ -101,6 +101,8 @@ hand-matching the surrounding style.
 | `pyfit/mcp_server.py` | MCP server (`pyfit-mcp`, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest`, all built on `api.py`. |
 | `pyfit/cli.py` | `argparse`-based command-line entry point, built on `api.py`. |
 | `pyfit/__init__.py` | `__version__` (from installed package metadata via `importlib.metadata`, not hardcoded — don't duplicate `pyproject.toml`'s version here) and re-exports of the small public surface (`Part`, `Sheet`, `Placement`, `NestResult`, `pack`, `run_nest`, `load_part`, `nest_result_report`, `write_nest_files`), so `import pyfit` is directly useful. |
+| `skills/pyfit/SKILL.md` | OpenClaw skill (see "OpenClaw skill" below) teaching an OpenClaw agent when/how to invoke the `pyfit` CLI directly, no MCP setup required. |
+| `openclaw.config.snippet.jsonc` | A fragment for `~/.openclaw/openclaw.json` registering the skill above. |
 
 ## A real gotcha worth knowing about (`pyfit/nfp.py`)
 
@@ -145,6 +147,29 @@ placement can be slow. `api.py:run_nest` forwards it through unchanged.
   progress reporting even though every existing test would probably still
   pass, since the tests use a fake `Context` and don't assert on timing.
 
+## OpenClaw skill
+
+`skills/pyfit/SKILL.md` follows [OpenClaw](https://docs.openclaw.ai)'s skill
+format: YAML frontmatter (`name`, `description`, and here a
+`metadata.openclaw.requires.bins: ["pyfit"]` gate so the skill only offers
+itself when the `pyfit` command is actually installed and on `PATH`) followed
+by a markdown body of instructions for the agent. OpenClaw discovers skills
+by scanning configured roots for `<root>/<skill-name>/SKILL.md` (up to 6
+levels deep) — hence the nested `skills/pyfit/` directory, not a bare
+`SKILL.md` at the repo root. `openclaw.config.snippet.jsonc` is a fragment
+(not a complete config) meant to be merged into `~/.openclaw/openclaw.json`:
+it adds this repo's `skills/` directory to `skills.load.extraDirs` and
+enables the `pyfit` entry under `skills.entries`.
+
+This is a separate, additive integration from the MCP server
+(`mcp_server.py`) above — the skill teaches an OpenClaw agent to shell out to
+the `pyfit` CLI directly (same as a human would), while `pyfit-mcp` is for
+any MCP-capable client making structured tool calls instead. Keep the skill
+body's job-spec/flag description in sync with `cli.py`'s actual `argparse`
+definitions and README's "Usage" section if either changes — it's a third
+place (after README and the CLI's own `--help`) that duplicates this same
+information for a different audience (an agent, not a human).
+
 ## Known limitations
 
 See README.md's "Known limitations" section (candidate placement points aren't
@@ -188,3 +213,8 @@ as historical flavor) both describe this project. The blog post also references
 pyLair by name and links to its repo — if pyLair moves again or this project's
 directory/repo location changes again, that post's links will go stale and need
 another pass.
+
+`skills/pyfit/SKILL.md` is a fourth place (alongside README, the blog post,
+and `cli.py --help`) describing how to actually run a nesting job — if the
+job-spec schema or CLI flags change, all four need updating, not just the
+ones that are obviously code.

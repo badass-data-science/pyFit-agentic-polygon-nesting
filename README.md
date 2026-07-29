@@ -100,6 +100,15 @@ Configure it in an MCP client (e.g. Claude Code/Desktop) by pointing at the `pyf
 
 All four tools also report [MCP progress notifications](https://modelcontextprotocol.io) on a large job, if the calling client requested them (i.e. sent a progress token): a heartbeat each time the packer tries a sheet for the current part instance, so a slow call doesn't look frozen mid-request. This works because packing itself runs in a worker thread while the tool `await`s it, keeping the server's event loop free to actually send those notifications out. With no progress token (or when calling the tool functions directly, e.g. in tests), this is simply a no-op.
 
+## OpenClaw skill
+
+For [OpenClaw](https://docs.openclaw.ai) users, this repo ships a skill at [`skills/pyfit/SKILL.md`](skills/pyfit/SKILL.md) that teaches an OpenClaw agent when and how to invoke the `pyfit` CLI (job spec format, flags, output files) without any MCP setup. To use it:
+
+1. Install `pyfit` itself (see "Installation" above) — the skill gates on the `pyfit` command being on `PATH`.
+2. Merge [`openclaw.config.snippet.jsonc`](openclaw.config.snippet.jsonc) into your `~/.openclaw/openclaw.json`, pointing `skills.load.extraDirs` at this repo's `skills/` directory.
+
+OpenClaw will then discover and enable the skill on its next run. This is a separate integration path from the MCP server above — the skill is for an OpenClaw agent shelling out to the `pyfit` CLI directly; `pyfit-mcp` is for any MCP-capable client (including OpenClaw, if it supports MCP servers) making structured tool calls instead.
+
 ## How it works
 
 A closed 2D shape's set of legal (non-overlapping) placements relative to another fixed shape is described by their **no-fit-polygon (NFP)**: the region a moving shape's reference point must stay outside of to avoid overlapping the stationary one. `pyfit` computes NFPs via [`pyclipper`](https://github.com/fonttools/pyclipper) (Python bindings to the mature Clipper library) using the standard Minkowski-sum technique, verified against a hand-computable case (the NFP of two unit squares is exactly the 2×2 square from (-1,-1) to (1,1)) before anything was built on top of it.
@@ -134,6 +143,8 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 | `pyfit/mcp_server.py` | MCP server (`pyfit-mcp` console command, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools built on `pyfit/api.py`. |
 | `pyfit/cli.py` | `argparse`-based command-line entry point, built on `pyfit/api.py`. |
 | `tests/` | pytest suite: unit tests per module, plus subprocess-level CLI integration tests. |
+| `skills/pyfit/SKILL.md` | OpenClaw skill teaching an agent when/how to invoke the `pyfit` CLI. See "OpenClaw skill" above. |
+| `openclaw.config.snippet.jsonc` | A snippet to merge into `~/.openclaw/openclaw.json` to register the above skill. |
 
 ## License
 
