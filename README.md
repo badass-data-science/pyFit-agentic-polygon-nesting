@@ -1,6 +1,6 @@
 # pyFit
 
-![nesting-example](blog-posts/images/nest_sheet1_pylair_triangles.png)
+<img src="blog-posts/images/nest_sheet1_pylair_triangles.png" alt="nesting-example" width="416" height="312">
 
 A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set of 2D shapes and how many of each you need, arranges them onto rectangular sheet stock (plywood, acrylic, sheet metal, ...) with minimal wasted material, and writes out a ready-to-cut **DXF file per sheet** (plus a JSON placement report) for your laser cutter or CNC router.
 
