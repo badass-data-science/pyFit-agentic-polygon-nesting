@@ -1,4 +1,4 @@
-# pyFit
+# pyFit - Agentic Irregular 2D Polygon Nesting (Bin-Packing) Tool
 
 <img src="blog-posts/images/nest_sheet1_pylair_triangles.png" alt="nesting-example" width="416" height="312">
 
