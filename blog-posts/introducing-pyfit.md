@@ -90,22 +90,23 @@ Unlike pyLair, which our heroine wrote by hand before bringing in Claude Code fo
 
 ## Tags
 
-geodesic
-nesting
-bin packing
-no-fit-polygon
-NFP
-laser cutting
-CNC
-sheet metal
-DXF
-Python
-shapely
-pyclipper
-Claude Code
-agentic AI
-MCP
-Model Context Protocol
-asyncio
-progress reporting
-Ultimate Cunning Master Plan
+* geodesic
+* nesting
+* bin packing
+* no-fit-polygon
+* NFP
+* laser cutting
+* CNC
+* sheet metal
+* DXF
+* Python
+* shapely
+* pyclipper
+* Claude Code
+* agentic AI
+* MCP
+* Model Context Protocol
+* asyncio
+* progress reporting
+* FastMCP
+* Ultimate Cunning Master Plan
