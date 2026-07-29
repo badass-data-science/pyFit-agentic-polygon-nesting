@@ -11,6 +11,8 @@ A general-purpose 2D irregular-polygon nesting (bin-packing) tool: given a set o
 
 This started as a follow-on to [pyLair](https://github.com/badass-data-science/pyLair-agentic-geodesics) — pyLair's Bill of Materials tells you exactly which triangular panel shapes a geodesic dome needs and how many of each, but has nothing to say about how to lay them out on actual material. `pyfit` is deliberately **not** a pyLair module, though — it's a standalone tool that happens to read the DXF files pyLair (or any other CAD tool) can produce, so it's equally usable for unrelated 2D cutting/fabrication problems.
 
+For the fuller story behind this project — why it exists, the algorithm design decisions, a real bug caught and fixed along the way, and how it was built — see the [introductory blog post](blog-posts/introducing-pyfit.md).
+
 ## Installation
 
 ```
@@ -33,6 +35,12 @@ For running the test suite:
 ```
 pip install -e ".[test]"
 pytest
+```
+
+With coverage:
+
+```
+pytest --cov=pyfit --cov-report=term-missing
 ```
 
 For linting and type checking (what CI runs):
@@ -100,6 +108,8 @@ On top of that primitive, `pyfit` runs a **bottom-left-fill heuristic**: place t
 
 This is a **heuristic, not a globally optimal solver** — irregular 2D bin-packing is NP-hard, and this is the same family of approach used by tools like SVGnest/DeepNest. A refinement pass (simulated annealing or genetic reordering on top of this base placement) would be a natural future improvement, not something this MVP attempts.
 
+**Complexity.** For one part instance trying one sheet, the candidate-point search costs O(P) no-fit-polygon computations plus O(P²) pairwise NFP-ring intersection checks, where P is the number of parts already placed on that sheet. That repeats once per candidate orientation (O(360 / rotation_step_degrees) of them) and, when scrap reuse forces trying more than one already-opened sheet, once per sheet tried — so a full run of N part instances costs on the order of N × orientations × P² geometry operations in the worst case. This is exactly why a finer `-R/--rotation-step` and heavier scrap reuse (more, fuller sheets to search) directly trade off against wall-clock time, as measured below.
+
 ### A real gotcha worth knowing about
 
 `pyclipper.MinkowskiSum` on a closed path doesn't return a single resolved polygon — it returns the *raw* sweep contours, which for a small pattern swept around a larger path includes an inner contour that looks like a hole but isn't one (the Minkowski sum of two convex filled shapes is always itself convex, hence never has a hole — verified against an independent ground truth, the convex hull of all pairwise vertex sums, on a case where the raw Clipper output was misleading). The fix, in `pyfit/nfp.py`, is to treat every returned contour as an independent solid region and take their union via `shapely` rather than trusting Clipper's own winding-direction-implied fill rule. This assumes the true NFP has no legitimate holes, which holds for the convex/simple shapes this package targets, but would be wrong for a genuinely non-convex shape with a real unreachable pocket — out of scope here.
@@ -122,7 +132,7 @@ This is a **heuristic, not a globally optimal solver** — irregular 2D bin-pack
 | `pyfit/preview.py` | Renders a quick 2D preview PNG (`-P/--preview`) of a sheet's layout (boundary plus every placed part's outline), the same role as pyLair's own preview module. |
 | `pyfit/api.py` | Programmatic entry point shared by the CLI and the MCP server: `run_nest(...)`/`load_part(...)` (job-spec parsing and packing) and `nest_result_report(...)`/`write_nest_files(...)` (structured report and file output), all `ValueError`-raising on bad input rather than printing and exiting. |
 | `pyfit/mcp_server.py` | MCP server (`pyfit-mcp` console command, optional `mcp` extra): `design_nest`/`preview_nest`/`get_nest_report`/`export_nest` tools built on `pyfit/api.py`. |
-| `pyfit/cli.py` | `getopt`-based command-line entry point, built on `pyfit/api.py`. |
+| `pyfit/cli.py` | `argparse`-based command-line entry point, built on `pyfit/api.py`. |
 | `tests/` | pytest suite: unit tests per module, plus subprocess-level CLI integration tests. |
 
 ## License

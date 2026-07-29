@@ -41,7 +41,7 @@ Issues = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/i
 Changelog = "https://github.com/badass-data-science/pyFit-agentic-polygon-nesting/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "pytest-cov"]
 mcp = ["mcp<2.0"]
 lint = ["ruff", "mypy", "types-shapely"]
 
@@ -58,6 +58,12 @@ pyfit = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["pyfit"]
+
+[tool.coverage.report]
+exclude_also = ["if __name__ == .__main__.:"]
+
 [tool.ruff]
 line-length = 100
 
@@ -65,6 +71,7 @@ line-length = 100
 files = ["pyfit"]
 warn_unused_ignores = true
 warn_redundant_casts = true
+disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = ["pyclipper", "mcp.*"]

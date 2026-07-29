@@ -29,90 +29,111 @@ Point = tuple[float, float]
 
 @dataclass
 class Part:
-  # polygon is a closed 2D outline in the part's own local coordinate
-  # frame; rotation/mirroring are applied about the local origin (0, 0)
-  # before a solved placement translates it into sheet coordinates, so
-  # callers should give the polygon relative to whatever local reference
-  # point they want rotation to pivot around (e.g. one corner, or the
-  # centroid).
-  name: str
-  polygon: list[Point]
-  quantity: int
-  allow_mirror: bool = True
+    """A shape to be nested, and how many copies of it are needed.
+
+    `polygon` is a closed 2D outline in the part's own local coordinate
+    frame; rotation/mirroring are applied about the local origin (0, 0)
+    before a solved placement translates it into sheet coordinates, so
+    callers should give the polygon relative to whatever local reference
+    point they want rotation to pivot around (e.g. one corner, or the
+    centroid).
+    """
+
+    name: str
+    polygon: list[Point]
+    quantity: int
+    allow_mirror: bool = True
 
 
 @dataclass
 class Sheet:
-  width: float
-  height: float
+    """A rectangular piece of stock, `width` x `height`, origin at one corner."""
+
+    width: float
+    height: float
 
 
 @dataclass
 class Placement:
-  part_name: str
-  sheet_index: int
-  position: Point           # translation applied after rotation/mirroring
-  rotation_degrees: float
-  mirrored: bool
-  polygon: list[Point]       # final polygon in sheet coordinates, for
-                              # convenience (export/verification don't have
-                              # to re-derive it from the transform fields)
+    """Where one part instance ended up: sheet, transform, and final polygon."""
+
+    part_name: str
+    sheet_index: int
+    position: Point  # translation applied after rotation/mirroring
+    rotation_degrees: float
+    mirrored: bool
+    # final polygon in sheet coordinates, for convenience (export/verification
+    # don't have to re-derive it from the transform fields)
+    polygon: list[Point]
 
 
 @dataclass
 class NestResult:
-  sheets_used: int
-  placements: list[Placement] = field(default_factory=list)
-  utilization_by_sheet: list[float] = field(default_factory=list)
+    """The outcome of a `packer.pack` run: sheet count, placements, utilization."""
+
+    sheets_used: int
+    placements: list[Placement] = field(default_factory=list)
+    utilization_by_sheet: list[float] = field(default_factory=list)
 
 
 def polygon_area(polygon: list[Point]) -> float:
-  return Polygon(polygon).area
+    """The polygon's area (always non-negative, regardless of winding direction)."""
+    return Polygon(polygon).area
 
 
 def bounding_box(polygon: list[Point]) -> tuple[float, float, float, float]:
-  xs = [p[0] for p in polygon]
-  ys = [p[1] for p in polygon]
-  return (min(xs), min(ys), max(xs), max(ys))
+    """The polygon's axis-aligned bounding box, as (min_x, min_y, max_x, max_y)."""
+    xs = [p[0] for p in polygon]
+    ys = [p[1] for p in polygon]
+    return (min(xs), min(ys), max(xs), max(ys))
 
 
 def translate_polygon(polygon: list[Point], dx: float, dy: float) -> list[Point]:
-  return [(x + dx, y + dy) for x, y in polygon]
+    """The polygon shifted by (dx, dy)."""
+    return [(x + dx, y + dy) for x, y in polygon]
 
 
 def rotate_polygon(polygon: list[Point], degrees: float) -> list[Point]:
-  # rotated about the local origin (0, 0), not the polygon's own centroid
-  # -- see Part's docstring
-  theta = np.radians(degrees)
-  cos_t, sin_t = np.cos(theta), np.sin(theta)
-  return [(x * cos_t - y * sin_t, x * sin_t + y * cos_t) for x, y in polygon]
+    """The polygon rotated counter-clockwise about the local origin (0, 0),
+    not the polygon's own centroid -- see `Part`."""
+    theta = np.radians(degrees)
+    cos_t, sin_t = np.cos(theta), np.sin(theta)
+    return [(x * cos_t - y * sin_t, x * sin_t + y * cos_t) for x, y in polygon]
 
 
 def mirror_polygon(polygon: list[Point]) -> list[Point]:
-  # reflect across the local Y axis (x -> -x); combined with
-  # rotate_polygon, this reaches every orientation of both the shape and
-  # its mirror image
-  return [(-x, y) for x, y in polygon]
+    """The polygon reflected across the local Y axis (x -> -x). Combined with
+    `rotate_polygon`, this reaches every orientation of both the shape and
+    its mirror image."""
+    return [(-x, y) for x, y in polygon]
 
 
 def orient_ccw(polygon: list[Point]) -> list[Point]:
-  # the shoelace signed area is positive for a counter-clockwise polygon;
-  # NFP computation (see nfp.py) assumes consistently-wound input, so
-  # every polygon this module hands off gets normalized here rather than
-  # trusting the caller's winding
-  signed_area = sum(
-    polygon[i][0] * polygon[(i + 1) % len(polygon)][1]
-    - polygon[(i + 1) % len(polygon)][0] * polygon[i][1]
-    for i in range(len(polygon))
-  ) / 2.0
-  return polygon if signed_area > 0 else list(reversed(polygon))
+    """The polygon, reversed if necessary so it winds counter-clockwise.
+
+    The shoelace signed area is positive for a counter-clockwise polygon;
+    NFP computation (see `nfp.py`) assumes consistently-wound input, so
+    every polygon this module hands off gets normalized here rather than
+    trusting the caller's winding.
+    """
+    signed_area = (
+        sum(
+            polygon[i][0] * polygon[(i + 1) % len(polygon)][1]
+            - polygon[(i + 1) % len(polygon)][0] * polygon[i][1]
+            for i in range(len(polygon))
+        )
+        / 2.0
+    )
+    return polygon if signed_area > 0 else list(reversed(polygon))
 
 
-def transform_polygon(polygon: list[Point], rotation_degrees: float, mirrored: bool,
-                       dx: float, dy: float) -> list[Point]:
-  # canonical order: mirror, then rotate, then translate -- matches how
-  # Placement's fields are interpreted everywhere else in this package
-  poly = mirror_polygon(polygon) if mirrored else polygon
-  poly = rotate_polygon(poly, rotation_degrees)
-  poly = translate_polygon(poly, dx, dy)
-  return poly
+def transform_polygon(
+    polygon: list[Point], rotation_degrees: float, mirrored: bool, dx: float, dy: float
+) -> list[Point]:
+    """The polygon mirrored (if `mirrored`), then rotated, then translated --
+    the canonical order, matching how `Placement`'s fields are interpreted
+    everywhere else in this package."""
+    poly = mirror_polygon(polygon) if mirrored else polygon
+    poly = rotate_polygon(poly, rotation_degrees)
+    poly = translate_polygon(poly, dx, dy)
+    return poly

@@ -70,7 +70,13 @@ def test_nest_result_report_structure():
     assert report["sheets_used"] == 1
     assert len(report["placements"]) == 2
     placement = report["placements"][0]
-    assert set(placement) == {"part_name", "sheet_index", "position", "rotation_degrees", "mirrored"}
+    assert set(placement) == {
+        "part_name",
+        "sheet_index",
+        "position",
+        "rotation_degrees",
+        "mirrored",
+    }
 
 
 def test_write_nest_files_writes_one_dxf_per_sheet(tmp_path):

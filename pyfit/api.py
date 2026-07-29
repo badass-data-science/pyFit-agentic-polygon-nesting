@@ -38,96 +38,108 @@ from .preview import save_sheet_preview
 
 
 def load_part(spec: dict) -> Part:
-  """Build a Part from one job-spec part dict: {"name", "quantity",
-  "dxf" or "polygon", "allow_mirror" (optional, default True)}. Raises
-  ValueError if the spec is missing a required field, gives neither "dxf"
-  nor "polygon", or points at a DXF file that isn't exactly one closed
-  loop."""
-  name = spec.get("name")
-  if name is None:
-    raise ValueError('Part spec is missing required field "name".')
-  if "quantity" not in spec:
-    raise ValueError(f'Part {name!r} is missing required field "quantity".')
+    """Build a Part from one job-spec part dict: {"name", "quantity",
+    "dxf" or "polygon", "allow_mirror" (optional, default True)}. Raises
+    ValueError if the spec is missing a required field, gives neither "dxf"
+    nor "polygon", or points at a DXF file that isn't exactly one closed
+    loop."""
+    name = spec.get("name")
+    if name is None:
+        raise ValueError('Part spec is missing required field "name".')
+    if "quantity" not in spec:
+        raise ValueError(f'Part {name!r} is missing required field "quantity".')
 
-  if "dxf" in spec:
-    loops = import_polygons_from_dxf(spec["dxf"])
-    if len(loops) != 1:
-      raise ValueError(
-          f'Part {name!r}: DXF file {spec["dxf"]!r} must contain exactly one closed loop, '
-          f'found {len(loops)}.')
-    polygon = loops[0]
-  elif "polygon" in spec:
-    polygon = [(float(x), float(y)) for x, y in spec["polygon"]]
-  else:
-    raise ValueError(f'Part {name!r} must specify either "dxf" or "polygon".')
+    if "dxf" in spec:
+        loops = import_polygons_from_dxf(spec["dxf"])
+        if len(loops) != 1:
+            raise ValueError(
+                f"Part {name!r}: DXF file {spec['dxf']!r} must contain exactly one closed loop, "
+                f"found {len(loops)}."
+            )
+        polygon = loops[0]
+    elif "polygon" in spec:
+        polygon = [(float(x), float(y)) for x, y in spec["polygon"]]
+    else:
+        raise ValueError(f'Part {name!r} must specify either "dxf" or "polygon".')
 
-  return Part(
-      name=name,
-      polygon=polygon,
-      quantity=int(spec["quantity"]),
-      allow_mirror=bool(spec.get("allow_mirror", True)),
-  )
+    return Part(
+        name=name,
+        polygon=polygon,
+        quantity=int(spec["quantity"]),
+        allow_mirror=bool(spec.get("allow_mirror", True)),
+    )
 
 
-def run_nest(job: dict, rotation_step_degrees: float = 15.0,
-             on_progress: Callable[[int, int, int], None] | None = None) -> tuple[Sheet, NestResult]:
-  """Parse a job spec dict ({"sheet": {"width", "height"}, "parts": [...]})
-  and run the bottom-left-fill packer. Returns the parsed Sheet alongside
-  the NestResult so callers that go on to write files (see
-  write_nest_files) don't have to re-parse the job spec. Raises
-  ValueError on a malformed job/part spec or a rotation step outside
-  (0, 360).
+def run_nest(
+    job: dict,
+    rotation_step_degrees: float = 15.0,
+    on_progress: Callable[[int, int, int], None] | None = None,
+) -> tuple[Sheet, NestResult]:
+    """Parse a job spec dict ({"sheet": {"width", "height"}, "parts": [...]})
+    and run the bottom-left-fill packer. Returns the parsed Sheet alongside
+    the NestResult so callers that go on to write files (see
+    write_nest_files) don't have to re-parse the job spec. Raises
+    ValueError on a malformed job/part spec or a rotation step outside
+    (0, 360).
 
-  on_progress, if given, is forwarded to packer.pack (see there for its
-  signature and how often it fires) -- a heartbeat for a caller that
-  wants to show a large job is still working, not frozen."""
-  if not (0 < rotation_step_degrees < 360):
-    raise ValueError(
-        'rotation_step_degrees (CLI: -R/--rotation-step) must be greater than zero and less than 360.')
+    on_progress, if given, is forwarded to packer.pack (see there for its
+    signature and how often it fires) -- a heartbeat for a caller that
+    wants to show a large job is still working, not frozen."""
+    if not (0 < rotation_step_degrees < 360):
+        raise ValueError(
+            "rotation_step_degrees (CLI: -R/--rotation-step) must be greater than zero and less than 360."
+        )
 
-  sheet = Sheet(width=float(job["sheet"]["width"]), height=float(job["sheet"]["height"]))
-  parts = [load_part(spec) for spec in job["parts"]]
-  result = pack(parts, sheet, rotation_step_degrees=rotation_step_degrees, on_progress=on_progress)
-  return sheet, result
+    sheet = Sheet(width=float(job["sheet"]["width"]), height=float(job["sheet"]["height"]))
+    parts = [load_part(spec) for spec in job["parts"]]
+    result = pack(
+        parts, sheet, rotation_step_degrees=rotation_step_degrees, on_progress=on_progress
+    )
+    return sheet, result
 
 
 def nest_result_report(result: NestResult) -> dict:
-  """The structured, file-free part of a nesting report: sheet count,
-  per-sheet utilization, and every part's final placement. Callers that
-  write files (the CLI, export_nest) add their own "files_written" key
-  on top of this."""
-  return {
-      'sheets_used': result.sheets_used,
-      'utilization_by_sheet': result.utilization_by_sheet,
-      'placements': [
-          {
-              'part_name': p.part_name,
-              'sheet_index': p.sheet_index,
-              'position': list(p.position),
-              'rotation_degrees': p.rotation_degrees,
-              'mirrored': p.mirrored,
-          }
-          for p in result.placements
-      ],
-  }
+    """The structured, file-free part of a nesting report: sheet count,
+    per-sheet utilization, and every part's final placement. Callers that
+    write files (the CLI, export_nest) add their own "files_written" key
+    on top of this."""
+    return {
+        "sheets_used": result.sheets_used,
+        "utilization_by_sheet": result.utilization_by_sheet,
+        "placements": [
+            {
+                "part_name": p.part_name,
+                "sheet_index": p.sheet_index,
+                "position": list(p.position),
+                "rotation_degrees": p.rotation_degrees,
+                "mirrored": p.mirrored,
+            }
+            for p in result.placements
+        ],
+    }
 
 
-def write_nest_files(sheet: Sheet, result: NestResult, output_path: str,
-                      preview: bool = False) -> list[str]:
-  """Write one DXF (and, if preview=True, one PNG) per sheet actually
-  used to "<output_path>_sheet<N>.<ext>". Returns the list of paths
-  written, in the same order the CLI reports them."""
-  files_written = []
-  for sheet_index in range(result.sheets_used):
-    placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
-    sheet_path = f'{output_path}_sheet{sheet_index + 1}.dxf'
-    write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
-    files_written.append(sheet_path)
+def write_nest_files(
+    sheet: Sheet, result: NestResult, output_path: str, preview: bool = False
+) -> list[str]:
+    """Write one DXF (and, if preview=True, one PNG) per sheet actually
+    used to "<output_path>_sheet<N>.<ext>". Returns the list of paths
+    written, in the same order the CLI reports them."""
+    files_written = []
+    for sheet_index in range(result.sheets_used):
+        placements_on_sheet = [p for p in result.placements if p.sheet_index == sheet_index]
+        sheet_path = f"{output_path}_sheet{sheet_index + 1}.dxf"
+        write_sheet_dxf(placements_on_sheet, sheet, sheet_path)
+        files_written.append(sheet_path)
 
-    if preview:
-      preview_path = f'{output_path}_sheet{sheet_index + 1}.png'
-      save_sheet_preview(sheet, placements_on_sheet, preview_path,
-                          sheet_number=sheet_index + 1,
-                          utilization=result.utilization_by_sheet[sheet_index])
-      files_written.append(preview_path)
-  return files_written
+        if preview:
+            preview_path = f"{output_path}_sheet{sheet_index + 1}.png"
+            save_sheet_preview(
+                sheet,
+                placements_on_sheet,
+                preview_path,
+                sheet_number=sheet_index + 1,
+                utilization=result.utilization_by_sheet[sheet_index],
+            )
+            files_written.append(preview_path)
+    return files_written
