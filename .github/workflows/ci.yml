@@ -19,8 +19,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install package with test/lint/mcp extras
-        run: pip install -e ".[test,lint,mcp]"
+      - name: Install package with test/lint extras
+        run: pip install -e ".[test,lint]"
+
+      # mcp<2.0 (this project's pin) only publishes versions requiring
+      # Python >=3.10; on the 3.9 floor, test_mcp_server.py auto-skips via
+      # pytest.importorskip("mcp") instead.
+      - name: Install mcp extra (Python >=3.10 only)
+        if: ${{ matrix.python-version != '3.9' }}
+        run: pip install -e ".[mcp]"
 
       - name: Lint (ruff)
         run: ruff check pyfit tests
