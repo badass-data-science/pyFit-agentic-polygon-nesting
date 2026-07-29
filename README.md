@@ -11,6 +11,17 @@ This started as a follow-on to [pyLair](https://github.com/badass-data-science/p
 ## Installation
 
 ```
+pip install pyfit-agentic-polygon-nesting
+```
+
+The distribution name is `pyfit-agentic-polygon-nesting` (`pyfit` was already
+taken on PyPI by an unrelated project), but the importable package, CLI
+command, and MCP console script are all still `pyfit`/`pyfit-mcp` — see
+"Naming note" in [AGENTS.md](AGENTS.md) for the full history.
+
+For local development, install from a checkout instead:
+
+```
 pip install -e .
 ```
 
@@ -62,7 +73,7 @@ pyLair's `-T/--face-templates` flag writes one DXF cutting template per unique p
 For agentic use (an LLM assistant interactively nesting parts), install the `mcp` extra:
 
 ```
-pip install -e ".[mcp]"
+pip install "pyfit-agentic-polygon-nesting[mcp]"
 ```
 
 This provides a `pyfit-mcp` console command: an [MCP](https://modelcontextprotocol.io) server (stdio transport) exposing four tools, all sharing one parameter schema (`sheet_width`, `sheet_height`, `parts` — a list of job-spec part dicts, see above — and `rotation_step_degrees`):
