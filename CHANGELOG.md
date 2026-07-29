@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project has not yet adopted semantic version releases; entries are grouped
 by date instead.
 
+## 2026-07-29
+
+### Added
+
+- Knowledge graph snapshot via [graphify](https://github.com/safishamsi/graphify):
+  `graphify-out/graph.html` (interactive), `graphify-out/GRAPH_REPORT.md`
+  (audit report), and `graphify-out/graph.json` (raw graph data) are now
+  tracked; everything else under `graphify-out/` (extraction cache, cost
+  log, community labels, interpreter/root pointers) is gitignored as
+  local/derived state. Added `references` edges (manually, INFERRED,
+  0.95 confidence) linking the CI workflow's Ruff/Mypy/Coverage steps to
+  the `pyproject.toml` config sections they actually enforce, closing a
+  gap the graph itself surfaced — those steps previously only linked to
+  the parent CI-pipeline node. README/AGENTS.md updated to document both
+  the graph and that manual edge (which a future full `/graphify` rebuild
+  will silently drop unless re-added).
+
 ## 2026-07-28
 
 ### Changed
